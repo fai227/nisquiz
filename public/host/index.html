@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Host</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            color: #1a1a1a;
+        }
+
+        main {
+            width: 100vw;
+            height: 100vh;
+            padding: 16px;
+        }
+
+        .screen[hidden] {
+            display: none;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+        }
+
+        .console-actions {
+            margin-top: 16px;
+        }
+
+        .console-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 32px;
+        }
+
+        .console-logo {
+            width: auto;
+            height: 400px;
+            max-width: 80%;
+            object-fit: contain;
+        }
+
+        .console-participants {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .console-start {
+            font-size: 6rem;
+            font-weight: 800;
+            background: #7a4bb7;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 64px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .console-start:hover {
+            background: #6a3da5;
+        }
+
+        .quiz-layout {
+            display: grid;
+            gap: 16px;
+            height: 100%;
+            grid-template-rows: auto auto minmax(0, 1fr);
+        }
+
+        .quiz-banner {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 12px;
+            height: 100px;
+        }
+
+        .quiz-banner-left {
+            justify-self: start;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .quiz-banner-left img {
+            display: block;
+            width: auto;
+            height: 50%;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
+        .quiz-banner-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-self: center;
+            color: #7a4bb7;
+            font-size: 4rem;
+            font-weight: 600;
+        }
+
+        .quiz-banner-subtitle {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: #555;
+            line-height: 1.1;
+        }
+
+        .quiz-banner-right {
+            justify-self: end;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            color: #555;
+        }
+
+        .quiz-banner-right button {
+            background: #7a4bb7;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .quiz-banner-right button:hover {
+            background: #6a3da5;
+        }
+
+        .question-area {
+            width: 100%;
+            font-size: 7rem;
+            font-weight: 800;
+            margin: 24px 0;
+            text-align: center;
+        }
+
+        .question-area-small {
+            font-size: 3.5rem;
+        }
+
+        .geoguessr-image-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            min-height: 0;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .geoguessr-image {
+            display: block;
+            width: auto;
+            max-width: 70%;
+            max-width: 1200px;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        .geoguessr-answer-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 24px;
+            align-items: stretch;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .geoguessr-answer-left,
+        .geoguessr-answer-right {
+            min-width: 0;
+        }
+
+        .geoguessr-answer-left {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            gap: 16px;
+            align-content: start;
+            min-height: 0;
+        }
+
+        .geoguessr-answer-left .geoguessr-image {
+            width: auto;
+            max-width: 100%;
+        }
+
+        .geoguessr-answer-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .geoguessr-canvas-wrap {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+
+        .geoguessr-canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-width: 100%;
+            border-radius: 12px;
+        }
+
+        .choices-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            width: 100%;
+        }
+
+        .choices-list {
+            grid-template-columns: 1fr;
+            width: 50%;
+            margin: 0 auto;
+        }
+
+        .choice-item {
+            min-height: 72px;
+            display: flex;
+            align-items: center;
+            background: #f3ecfb;
+            border-radius: 8px;
+            font-size: 6rem;
+            font-weight: 800;
+            padding: 0 24px;
+            gap: 24px;
+        }
+
+        .choice-num {
+            flex-shrink: 0;
+            color: #7a4bb7;
+        }
+
+        .choice-text {
+            flex: 1;
+            text-align: center;
+        }
+
+        .choice-item.choice-correct {
+            background: #7a4bb7;
+            color: #fff;
+        }
+
+        .choice-item.choice-correct .choice-num {
+            color: #cbb3ea;
+        }
+
+        .choice-item.choice-wrong {
+            opacity: 0.3;
+        }
+
+        @media (max-width: 640px) {
+            .quiz-banner {
+                grid-template-columns: 1fr;
+                justify-items: start;
+            }
+
+            .quiz-banner-center,
+            .quiz-banner-right {
+                justify-self: start;
+            }
+
+            .choices-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .choices-list {
+                width: 100%;
+            }
+
+            .geoguessr-answer-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <section id="screen-console" class="screen">
+            <div class="console-layout">
+                <img src="../images/logo.svg" alt="ロゴ" class="console-logo" />
+                <p class="console-participants">現在の参加人数: <span id="participant-count">0</span>人</p>
+                <button id="start-button" class="console-start" type="button">ゲーム開始</button>
+            </div>
+        </section>
+
+        <section id="screen-choice" class="screen" hidden>
+            <div class="quiz-layout">
+                <header class="quiz-banner">
+                    <div class="quiz-banner-left">
+                        <img src="../images/wide.svg" alt="バナー" />
+                    </div>
+                    <div class="quiz-banner-center">
+                        <span>N問目</span>
+                        <span class="quiz-banner-subtitle">- 択一クイズ -</span>
+                    </div>
+                    <div class="quiz-banner-right">
+                        <span>解答完了: n/N人</span>
+                        <button id="next-button" type="button">次へ</button>
+                    </div>
+                </header>
+
+                <section class="question-area">
+                    <p>日本で一番高い山は？</p>
+                </section>
+
+                <section class="choices-grid" aria-label="選択肢">
+                    <div class="choice-item"><span class="choice-num">1.</span><span class="choice-text">選択肢1</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">2.</span><span class="choice-text">選択肢2</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">3.</span><span class="choice-text">選択肢3</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">4.</span><span class="choice-text">選択肢4</span>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="screen-sortable" class="screen" hidden>
+            <div class="quiz-layout">
+                <header class="quiz-banner">
+                    <div class="quiz-banner-left">
+                        <img src="../images/wide.svg" alt="バナー" />
+                    </div>
+                    <div class="quiz-banner-center">
+                        <span>N問目</span>
+                        <span class="quiz-banner-subtitle">- 入れ替えクイズ -</span>
+                    </div>
+                    <div class="quiz-banner-right">
+                        <span>解答完了: n/N人</span>
+                        <button id="next-button-sortable" type="button">次へ</button>
+                    </div>
+                </header>
+
+                <section class="question-area">
+                    <p>日本で二番目に高い山は？</p>
+                </section>
+
+                <section class="choices-grid" aria-label="選択肢">
+                    <div class="choice-item"><span class="choice-num">1.</span><span class="choice-text">選択肢1</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">2.</span><span class="choice-text">選択肢2</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">3.</span><span class="choice-text">選択肢3</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">4.</span><span class="choice-text">選択肢4</span>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="screen-sortable-answer" class="screen" hidden>
+            <div class="quiz-layout">
+                <header class="quiz-banner">
+                    <div class="quiz-banner-left">
+                        <img src="../images/wide.svg" alt="バナー" />
+                    </div>
+                    <div class="quiz-banner-center">
+                        <span>N問目</span>
+                        <span class="quiz-banner-subtitle">- 入れ替えクイズ -</span>
+                    </div>
+                    <div class="quiz-banner-right">
+                        <span>解答完了: n/N人</span>
+                        <button id="next-button-sortable-answer" type="button">次へ</button>
+                    </div>
+                </header>
+
+                <section class="question-area question-area-small">
+                    <p>歴代売上の高い順に並べ替えてください</p>
+                </section>
+
+                <section class="choices-grid choices-list" aria-label="解答順">
+                    <div class="choice-item"><span class="choice-num">1.</span><span class="choice-text">鬼滅の刃</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">2.</span><span class="choice-text">千と千尋の神隠し</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">3.</span><span class="choice-text">君の名は。</span>
+                    </div>
+                    <div class="choice-item"><span class="choice-num">4.</span><span class="choice-text">もののけ姫</span>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="screen-geoguessr" class="screen" hidden>
+            <div class="quiz-layout">
+                <header class="quiz-banner">
+                    <div class="quiz-banner-left">
+                        <img src="../images/wide.svg" alt="バナー" />
+                    </div>
+                    <div class="quiz-banner-center">
+                        <span>N問目</span>
+                        <span class="quiz-banner-subtitle">- ジオゲッサークイズ -</span>
+                    </div>
+                    <div class="quiz-banner-right">
+                        <span>解答完了: n/N人</span>
+                        <button id="next-button-geoguessr" type="button">次へ</button>
+                    </div>
+                </header>
+
+                <section class="question-area question-area-small">
+                    <p>ここはどこでしょう</p>
+                </section>
+
+                <section class="geoguessr-image-area" aria-label="出題画像">
+                    <img id="geoguessr-image" class="geoguessr-image"
+                        src="https://www.dropbox.com/scl/fi/snt31vmwwcyfe1u6fd34q/0D2AEA75-C028-4291-B19C-0C310F48AD6A.jpeg?rlkey=3v1d3x3s40gfu3kaoex3lf2ho&st=cqzxt86a&raw=1"
+                        alt="ジオゲッサークイズ画像" />
+                </section>
+            </div>
+        </section>
+
+        <section id="screen-geoguessr-answer" class="screen" hidden>
+            <div class="quiz-layout">
+                <header class="quiz-banner">
+                    <div class="quiz-banner-left">
+                        <img src="../images/wide.svg" alt="バナー" />
+                    </div>
+                    <div class="quiz-banner-center">
+                        <span>N問目</span>
+                        <span class="quiz-banner-subtitle">- ジオゲッサークイズ -</span>
+                    </div>
+                    <div class="quiz-banner-right">
+                        <span>解答完了: n/N人</span>
+                        <button id="next-button-geoguessr-answer" type="button">次へ</button>
+                    </div>
+                </header>
+
+                <section class="geoguessr-answer-layout">
+                    <div class="geoguessr-answer-left">
+                        <section class="question-area question-area-small">
+                            <p id="geoguessr-answer-question">ここはどこでしょう</p>
+                        </section>
+
+                        <section class="geoguessr-image-area" aria-label="出題画像">
+                            <img id="geoguessr-answer-image" class="geoguessr-image"
+                                src="https://www.dropbox.com/scl/fi/snt31vmwwcyfe1u6fd34q/0D2AEA75-C028-4291-B19C-0C310F48AD6A.jpeg?rlkey=3v1d3x3s40gfu3kaoex3lf2ho&st=cqzxt86a&raw=1"
+                                alt="ジオゲッサークイズ画像" />
+                        </section>
+                    </div>
+
+                    <div class="geoguessr-answer-right">
+                        <div class="geoguessr-canvas-wrap">
+                            <canvas id="geoguessr-map-canvas" class="geoguessr-canvas"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        "use strict";
+
+        const screenConsole = document.getElementById("screen-console");
+        const screenChoice = document.getElementById("screen-choice");
+        const screenSortable = document.getElementById("screen-sortable");
+        const screenSortableAnswer = document.getElementById("screen-sortable-answer");
+        const screenGeoguessr = document.getElementById("screen-geoguessr");
+        const screenGeoguessrAnswer = document.getElementById("screen-geoguessr-answer");
+        const startButton = document.getElementById("start-button");
+        const nextButton = document.getElementById("next-button");
+        const nextButtonSortable = document.getElementById("next-button-sortable");
+        const nextButtonSortableAnswer = document.getElementById("next-button-sortable-answer");
+        const nextButtonGeoguessr = document.getElementById("next-button-geoguessr");
+        const nextButtonGeoguessrAnswer = document.getElementById("next-button-geoguessr-answer");
+
+        const choiceQuestionText = screenChoice.querySelector(".question-area p");
+        const choiceItems = Array.from(screenChoice.querySelectorAll(".choice-item"));
+        const sortableQuestionText = screenSortable.querySelector(".question-area p");
+        const sortableItems = Array.from(screenSortable.querySelectorAll(".choice-item"));
+        const sortableAnswerQuestionText = screenSortableAnswer.querySelector(".question-area p");
+        const sortableAnswerItems = Array.from(screenSortableAnswer.querySelectorAll(".choice-item"));
+        const geoguessrQuestionText = screenGeoguessr.querySelector(".question-area p");
+        const geoguessrImage = document.getElementById("geoguessr-image");
+        const geoguessrAnswerQuestionText = document.getElementById("geoguessr-answer-question");
+        const geoguessrAnswerImage = document.getElementById("geoguessr-answer-image");
+        const geoguessrMapCanvas = document.getElementById("geoguessr-map-canvas");
+        const geoguessrMapContext = geoguessrMapCanvas.getContext("2d");
+
+        // 択一問題画面の状態: "question" | "answer"
+        let choiceScreenState = "question";
+        let currentAnswer = null;
+        let currentSortableQuestion = "";
+        let currentSortableChoices = [];
+        let currentGeoguessrQuestion = "";
+        let currentGeoguessrImageUrl = "";
+        const geoguessrMapImageUrl = "/images/map.jpg";
+
+        function showConsoleScreen() {
+            screenConsole.hidden = false;
+            screenChoice.hidden = true;
+            screenSortable.hidden = true;
+            screenSortableAnswer.hidden = true;
+            screenGeoguessr.hidden = true;
+            screenGeoguessrAnswer.hidden = true;
+        }
+
+        function renderQuizScreen(screen, questionElement, items, question, choices, labels) {
+            questionElement.textContent = question;
+            items.forEach((item, i) => {
+                const choiceNumber = item.querySelector(".choice-num");
+                item.querySelector(".choice-text").textContent = choices[i] ?? "";
+                if (choiceNumber) {
+                    choiceNumber.textContent = `${labels?.[i] ?? i + 1}.`;
+                }
+                item.classList.remove("choice-correct", "choice-wrong");
+                item.hidden = !choices[i];
+            });
+            screenConsole.hidden = true;
+            screenChoice.hidden = screen !== screenChoice;
+            screenSortable.hidden = screen !== screenSortable;
+            screenSortableAnswer.hidden = screen !== screenSortableAnswer;
+            screenGeoguessr.hidden = screen !== screenGeoguessr;
+            screenGeoguessrAnswer.hidden = screen !== screenGeoguessrAnswer;
+        }
+
+        // question: string, choices: string[]
+        function showQuestionScreen(question, choices) {
+            renderQuizScreen(screenChoice, choiceQuestionText, choiceItems, question, choices);
+            choiceScreenState = "question";
+        }
+
+        // question: string, choices: string[]
+        function showSortableQuestionScreen(question, choices) {
+            currentSortableQuestion = question;
+            currentSortableChoices = [...choices];
+            renderQuizScreen(screenSortable, sortableQuestionText, sortableItems, question, choices);
+        }
+
+        // answerOrder: number[] (1-based)
+        function showSortableAnswerScreen(answerOrder) {
+            const orderedAnswers = answerOrder.map((choiceIndex) => currentSortableChoices[choiceIndex - 1] ?? "");
+            renderQuizScreen(
+                screenSortableAnswer,
+                sortableAnswerQuestionText,
+                sortableAnswerItems,
+                currentSortableQuestion,
+                orderedAnswers,
+                answerOrder
+            );
+        }
+
+        // question: string, imageUrl: string
+        function showGeoguessrScreen(question, imageUrl) {
+            currentGeoguessrQuestion = question;
+            currentGeoguessrImageUrl = imageUrl;
+            geoguessrQuestionText.textContent = question;
+            geoguessrImage.src = imageUrl;
+            screenConsole.hidden = true;
+            screenChoice.hidden = true;
+            screenSortable.hidden = true;
+            screenSortableAnswer.hidden = true;
+            screenGeoguessr.hidden = false;
+            screenGeoguessrAnswer.hidden = true;
+        }
+
+        function drawGeoguessrMapMarker(x, y, r) {
+            const mapImage = new Image();
+            mapImage.onload = () => {
+                geoguessrMapCanvas.width = mapImage.width;
+                geoguessrMapCanvas.height = mapImage.height;
+                geoguessrMapContext.clearRect(0, 0, geoguessrMapCanvas.width, geoguessrMapCanvas.height);
+                geoguessrMapContext.drawImage(mapImage, 0, 0);
+
+                geoguessrMapContext.fillStyle = "#7a4bb7";
+                geoguessrMapContext.beginPath();
+                geoguessrMapContext.arc(x, y, Math.max(3, r / 3), 0, Math.PI * 2);
+                geoguessrMapContext.fill();
+
+                geoguessrMapContext.strokeStyle = "#7a4bb7";
+                geoguessrMapContext.lineWidth = 4;
+                geoguessrMapContext.beginPath();
+                geoguessrMapContext.arc(x, y, r, 0, Math.PI * 2);
+                geoguessrMapContext.stroke();
+            };
+            mapImage.src = geoguessrMapImageUrl;
+        }
+
+        // x: number, y: number, r: number
+        function showGeoguessrAnswerScreen(x, y, r) {
+            geoguessrAnswerQuestionText.textContent = currentGeoguessrQuestion;
+            geoguessrAnswerImage.src = currentGeoguessrImageUrl;
+            drawGeoguessrMapMarker(x, y, r);
+
+            screenConsole.hidden = true;
+            screenChoice.hidden = true;
+            screenSortable.hidden = true;
+            screenSortableAnswer.hidden = true;
+            screenGeoguessr.hidden = true;
+            screenGeoguessrAnswer.hidden = false;
+        }
+
+        // correctIndex: 1-based
+        function showAnswerScreen(correctIndex) {
+            currentAnswer = correctIndex;
+            choiceItems.forEach((item, i) => {
+                item.classList.remove("choice-correct", "choice-wrong");
+                if (i + 1 === correctIndex) {
+                    item.classList.add("choice-correct");
+                } else {
+                    item.classList.add("choice-wrong");
+                }
+            });
+            choiceScreenState = "answer";
+        }
+
+        startButton.addEventListener("click", () => {
+            showQuestionScreen("日本で一番高い山は？", ["富士山", "北岳", "奥穂高岳", "槍ヶ岳"]);
+        });
+
+        nextButton.addEventListener("click", () => {
+            if (choiceScreenState === "question") {
+                showAnswerScreen(1);
+            } else {
+                showSortableQuestionScreen("歴代売上の高い順に並べ替えてください", ["鬼滅の刃", "千と千尋の神隠し", "君の名は。", "もののけ姫"]);
+            }
+        });
+
+        nextButtonSortable.addEventListener("click", () => {
+            showSortableAnswerScreen([2, 1, 3, 4]);
+        });
+
+        nextButtonSortableAnswer.addEventListener("click", () => {
+            showGeoguessrScreen("ここはどこでしょう", "https://www.dropbox.com/scl/fi/snt31vmwwcyfe1u6fd34q/0D2AEA75-C028-4291-B19C-0C310F48AD6A.jpeg?rlkey=3v1d3x3s40gfu3kaoex3lf2ho&st=cqzxt86a&raw=1");
+        });
+
+        nextButtonGeoguessr.addEventListener("click", () => {
+            showGeoguessrAnswerScreen(887, 726, 30);
+        });
+
+        nextButtonGeoguessrAnswer.addEventListener("click", () => {
+            showConsoleScreen();
+        });
+    </script>
+</body>
+
+</html>
