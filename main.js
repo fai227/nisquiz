@@ -1,154 +1,147 @@
 const express = require("express");
 const http = require("http");
+const fs = require("fs");
+const path = require("path");
 const { WebSocketServer } = require("ws");
+const { parse } = require("csv-parse/sync");
 
 const app = express();
 const port = 3000;
 
 app.use(express.static("public"));
 
+function loadCsvAsObjectList(relativeFilePath) {
+    const absolutePath = path.join(__dirname, relativeFilePath);
+    const csvText = fs.readFileSync(absolutePath, "utf8");
+
+    return parse(csvText, {
+        bom: true,
+        columns: true,
+        skip_empty_lines: true,
+        relax_column_count: true,
+        trim: true,
+    });
+}
+
+function shuffleArray(array) {
+    const copied = [...array];
+    for (let i = copied.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copied[i], copied[j]] = [copied[j], copied[i]];
+    }
+    return copied;
+}
+
+function buildChoiceQuizList() {
+    const rawChoiceQuizList = loadCsvAsObjectList("quiz/問題集(択一クイズ).csv");
+
+    return rawChoiceQuizList.map((item) => {
+        const {
+            回答1,
+            回答2,
+            回答3,
+            回答4,
+            ...rest
+        } = item;
+
+        const correctAnswerIndex = Number(item["正解"]) - 1;
+        const optionsWithSourceIndex = [回答1, 回答2, 回答3, 回答4].map((text, index) => ({
+            text,
+            sourceIndex: index,
+        }));
+        const shuffledOptions = shuffleArray(optionsWithSourceIndex);
+        const newCorrectAnswerIndex = shuffledOptions.findIndex((option) => option.sourceIndex === correctAnswerIndex);
+
+        return {
+            ...rest,
+            難易度: Number(item["難易度"]),
+            正解: newCorrectAnswerIndex + 1,
+            選択肢: shuffledOptions.map((option) => option.text),
+        };
+    });
+}
+
+function buildSortableQuizList() {
+    const rawSortableQuizList = loadCsvAsObjectList("quiz/問題集(入れ替えクイズ).csv");
+
+    return rawSortableQuizList.map((item) => {
+        const {
+            回答1,
+            回答2,
+            回答3,
+            回答4,
+            ...rest
+        } = item;
+
+        const optionsWithSourceIndex = [回答1, 回答2, 回答3, 回答4].map((text, index) => ({
+            text,
+            sourceIndex: index,
+        }));
+        const shuffledOptions = shuffleArray(optionsWithSourceIndex);
+
+        const originalCorrectOrder = String(item["正解"])
+            .split(",")
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0)
+            .map((value) => Number(value) - 1)
+            .filter((value) => Number.isInteger(value) && value >= 0 && value < optionsWithSourceIndex.length);
+
+        const newCorrectOrder = originalCorrectOrder
+            .map((sourceIndex) => shuffledOptions.findIndex((option) => option.sourceIndex === sourceIndex))
+            .filter((newIndex) => newIndex >= 0)
+            .map((newIndex) => newIndex + 1);
+
+        return {
+            ...rest,
+            難易度: Number(item["難易度"]),
+            正解: newCorrectOrder,
+            選択肢: shuffledOptions.map((option) => option.text),
+        };
+    });
+}
+
+function parseCoordinate(value) {
+    const [xRaw, yRaw] = String(value)
+        .split(",")
+        .map((part) => part.trim());
+
+    return {
+        x: Number(xRaw),
+        y: Number(yRaw),
+    };
+}
+
+function buildGeoguessrQuizList() {
+    const rawGeoguessrQuizList = loadCsvAsObjectList("quiz/問題集(ジオゲッサー).csv");
+
+    return rawGeoguessrQuizList.map((item) => ({
+        ...item,
+        難易度: Number(item["難易度"]),
+        正解許容値: Number(item["正解許容値"]),
+        正解座標: parseCoordinate(item["正解座標"]),
+    }));
+}
+
+const choiceQuizList = buildChoiceQuizList();
+const sortableQuizList = buildSortableQuizList();
+const geoguessrQuizList = buildGeoguessrQuizList();
+
+console.log("choiceQuizList:", choiceQuizList);
+console.log("sortableQuizList:", sortableQuizList);
+console.log("geoguessrQuizList:", geoguessrQuizList);
+
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-const normalClients = new Set();
-const hostClients = new Set();
-
-const scores = new Map();
-
-function sendJson(ws, command, data) {
-    ws.send(JSON.stringify({ command, data }));
-}
-
-function broadcastToNormal(command, data) {
-    const payload = JSON.stringify({ command, data });
-    for (const client of normalClients) {
-        if (client.readyState === client.OPEN) {
-            client.send(payload);
-        }
-    }
-}
-
-function broadcastAllUsers() {
-    broadcastToNormal("all-users", null);
-}
-
-function safeParseJson(raw) {
-    try {
-        return JSON.parse(raw);
-    } catch {
-        return null;
-    }
-}
-
-function isInteger(value) {
-    return Number.isInteger(value);
-}
-
-function handleNormalCommand(ws, command, data) {
-    const clientId = ws._socket.remoteAddress + ":" + ws._socket.remotePort;
-    const current = scores.get(clientId) || { choice: null, sortable: null, geoguessr: null };
-
-    if (command === "answer-choice") {
-        if (!isInteger(data)) {
-            sendJson(ws, "error", "answer-choice expects int");
-            return;
-        }
-        current.choice = data;
-        scores.set(clientId, current);
-        return;
-    }
-
-    if (command === "answer-sortable") {
-        if (!isInteger(data)) {
-            sendJson(ws, "error", "answer-sortable expects int");
-            return;
-        }
-        current.sortable = data;
-        scores.set(clientId, current);
-        return;
-    }
-
-    if (command === "answer-geoguessr") {
-        if (!Array.isArray(data) || data.length !== 2 || !isInteger(data[0]) || !isInteger(data[1])) {
-            sendJson(ws, "error", "answer-geoguessr expects [int, int]");
-            return;
-        }
-        current.geoguessr = [data[0], data[1]];
-        scores.set(clientId, current);
-        return;
-    }
-
-    sendJson(ws, "error", `unknown normal command: ${command}`);
-}
-
-function handleHostCommand(_ws, command) {
-    if (command === "get-scores") {
-        const result = [];
-        for (const [clientId, value] of scores.entries()) {
-            result.push({ clientId, answers: value });
-        }
-        // Host outbound command is intentionally empty for now.
-        console.log("[get-scores]", result);
-        return;
-    }
-
-    sendJson(ws, "error", `unknown host command: ${command}`);
-}
-
 wss.on("connection", (ws) => {
-    ws.role = "unregistered";
+    console.log("WebSocket client connected");
 
     ws.on("message", (raw) => {
-        const message = safeParseJson(raw.toString());
-        if (!message || typeof message.command !== "string") {
-            sendJson(ws, "error", "invalid message format");
-            return;
-        }
-
-        const { command, data } = message;
-
-        if (command === "normal") {
-            if (ws.role !== "unregistered") {
-                sendJson(ws, "error", "role already set");
-                return;
-            }
-            ws.role = "normal";
-            normalClients.add(ws);
-            broadcastAllUsers();
-            return;
-        }
-
-        if (command === "host") {
-            if (ws.role !== "unregistered") {
-                sendJson(ws, "error", "role already set");
-                return;
-            }
-            ws.role = "host";
-            hostClients.add(ws);
-            return;
-        }
-
-        if (ws.role === "normal") {
-            handleNormalCommand(ws, command, data);
-            return;
-        }
-
-        if (ws.role === "host") {
-            handleHostCommand(ws, command, data);
-            return;
-        }
-
-        sendJson(ws, "error", "send role command first: normal or host");
+        console.log("[ws message]", raw.toString());
     });
 
     ws.on("close", () => {
-        if (ws.role === "normal") {
-            normalClients.delete(ws);
-            broadcastAllUsers();
-        }
-        if (ws.role === "host") {
-            hostClients.delete(ws);
-        }
+        console.log("WebSocket client disconnected");
     });
 });
 
