@@ -75,10 +75,35 @@
             padding: 16px 64px;
             cursor: pointer;
             font-family: inherit;
+            width: 100%;
         }
 
         .console-start:hover {
             background: #6a3da5;
+        }
+
+        .console-buttons {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 12px;
+        }
+
+        .console-reset {
+            font-size: 3rem;
+            font-weight: 700;
+            background: #888;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 8px 64px;
+            cursor: pointer;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .console-reset:hover {
+            background: #666;
         }
 
         .quiz-layout {
@@ -298,6 +323,50 @@
             display: flex;
         }
 
+        .scoreboard-top3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        #host-top3-list {
+            grid-row: 2 / -1;
+            align-self: stretch;
+            grid-template-rows: 1fr;
+            margin-bottom: 16px;
+        }
+
+        .score-card {
+            border-radius: 12px;
+            background: #f3ecfb;
+            padding: 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-card-rank {
+            font-size: 6rem;
+            font-weight: 800;
+            color: #7a4bb7;
+        }
+
+        .score-card-name {
+            font-size: 6.6rem;
+            font-weight: 800;
+            margin-top: 10px;
+        }
+
+        .score-card-points {
+            font-size: 6rem;
+            font-weight: 700;
+            margin-top: 8px;
+            color: #444;
+        }
+
         @media (max-width: 640px) {
             .quiz-banner {
                 grid-template-columns: 1fr;
@@ -331,7 +400,10 @@
             <div class="console-layout">
                 <img src="../images/logo.svg" alt="ロゴ" class="console-logo" />
                 <p class="console-participants">現在の参加人数: <span id="participant-count">0</span>人</p>
-                <button id="start-button" class="console-start" type="button">ゲーム開始</button>
+                <div class="console-buttons">
+                    <button id="start-button" class="console-start" type="button">ゲーム開始</button>
+                    <button id="reset-button" class="console-reset" type="button">リセット</button>
+                </div>
             </div>
         </section>
 
@@ -365,6 +437,25 @@
                     <div class="choice-item"><span class="choice-num">4.</span><span class="choice-text">選択肢4</span>
                     </div>
                 </section>
+            </div>
+        </section>
+
+        <section id="screen-scoreboard" class="screen" hidden>
+            <div class="quiz-layout">
+                <header class="quiz-banner">
+                    <div class="quiz-banner-left">
+                        <img src="../images/wide.svg" alt="バナー" />
+                    </div>
+                    <div class="quiz-banner-center">
+                        <span id="scoreboard-banner-title">現在の順位</span>
+                        <span class="quiz-banner-subtitle">- Top 3 -</span>
+                    </div>
+                    <div class="quiz-banner-right">
+                        <button id="next-button-scoreboard" type="button">次へ</button>
+                    </div>
+                </header>
+
+                <section class="scoreboard-top3" id="host-top3-list" aria-label="ランキング上位3名"></section>
             </div>
         </section>
 
@@ -506,18 +597,35 @@
 
         const screenConsole = document.getElementById("screen-console");
         const screenChoice = document.getElementById("screen-choice");
+        const screenScoreboard = document.getElementById("screen-scoreboard");
         const screenSortable = document.getElementById("screen-sortable");
         const screenSortableAnswer = document.getElementById("screen-sortable-answer");
         const screenGeoguessr = document.getElementById("screen-geoguessr");
         const screenGeoguessrAnswer = document.getElementById("screen-geoguessr-answer");
         const startButton = document.getElementById("start-button");
+        const resetButton = document.getElementById("reset-button");
         const nextButton = document.getElementById("next-button");
         const nextButtonSortable = document.getElementById("next-button-sortable");
+        const nextButtonScoreboard = document.getElementById("next-button-scoreboard");
+        const scoreboardBannerTitle = document.getElementById("scoreboard-banner-title");
         const nextButtonSortableAnswer = document.getElementById("next-button-sortable-answer");
         const nextButtonGeoguessr = document.getElementById("next-button-geoguessr");
         const nextButtonGeoguessrAnswer = document.getElementById("next-button-geoguessr-answer");
         const participantCountEl = document.getElementById("participant-count");
         const connectionLostEl = document.getElementById("connection-lost");
+        const choiceQuestionNumberEls = Array.from(screenChoice.querySelectorAll(".quiz-banner-center span"));
+        const sortableQuestionNumberEls = Array.from(screenSortable.querySelectorAll(".quiz-banner-center span"));
+        const sortableAnswerQuestionNumberEls = Array.from(screenSortableAnswer.querySelectorAll(".quiz-banner-center span"));
+        const geoguessrQuestionNumberEls = Array.from(screenGeoguessr.querySelectorAll(".quiz-banner-center span"));
+        const geoguessrAnswerQuestionNumberEls = Array.from(screenGeoguessrAnswer.querySelectorAll(".quiz-banner-center span"));
+        const hostTop3ListEl = document.getElementById("host-top3-list");
+        const answerProgressEls = [
+            screenChoice.querySelector(".quiz-banner-right span"),
+            screenSortable.querySelector(".quiz-banner-right span"),
+            screenSortableAnswer.querySelector(".quiz-banner-right span"),
+            screenGeoguessr.querySelector(".quiz-banner-right span"),
+            screenGeoguessrAnswer.querySelector(".quiz-banner-right span"),
+        ];
 
         const choiceQuestionText = screenChoice.querySelector(".question-area p");
         const choiceItems = Array.from(screenChoice.querySelectorAll(".choice-item"));
@@ -545,10 +653,75 @@
         function showConsoleScreen() {
             screenConsole.hidden = false;
             screenChoice.hidden = true;
+            screenScoreboard.hidden = true;
             screenSortable.hidden = true;
             screenSortableAnswer.hidden = true;
             screenGeoguessr.hidden = true;
             screenGeoguessrAnswer.hidden = true;
+        }
+
+        function showScoreboardScreen(top3, isFinal = false) {
+            scoreboardBannerTitle.textContent = isFinal ? "最終結果" : "現在の順位";
+            nextButtonScoreboard.textContent = isFinal ? "終了" : "次へ";
+            const rankLabels = ["1位", "2位", "3位"];
+            hostTop3ListEl.innerHTML = "";
+
+            for (let i = 0; i < 3; i += 1) {
+                const row = top3[i];
+                const card = document.createElement("article");
+                card.className = "score-card";
+
+                const rank = document.createElement("div");
+                rank.className = "score-card-rank";
+                rank.textContent = rankLabels[i];
+
+                const name = document.createElement("div");
+                name.className = "score-card-name";
+                name.textContent = row?.userName || "---";
+
+                const score = document.createElement("div");
+                score.className = "score-card-points";
+                score.textContent = `${row?.score ?? 0}点`;
+
+                card.appendChild(rank);
+                card.appendChild(name);
+                card.appendChild(score);
+                hostTop3ListEl.appendChild(card);
+            }
+
+            screenConsole.hidden = true;
+            screenChoice.hidden = true;
+            screenScoreboard.hidden = false;
+            screenSortable.hidden = true;
+            screenSortableAnswer.hidden = true;
+            screenGeoguessr.hidden = true;
+            screenGeoguessrAnswer.hidden = true;
+        }
+
+        function sendHostNext() {
+            if (!hostWs || hostWs.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            hostWs.send(JSON.stringify({
+                type: "host-next",
+            }));
+        }
+
+        function setQuestionNumber(elements, questionNumber) {
+            const label = `${questionNumber}問目`;
+            if (elements[0]) {
+                elements[0].textContent = label;
+            }
+        }
+
+        function updateAnswerProgress(answeredCount, clientCount) {
+            const label = `解答完了: ${answeredCount}/${clientCount}人`;
+            answerProgressEls.forEach((el) => {
+                if (el) {
+                    el.textContent = label;
+                }
+            });
         }
 
         function getWsUrl() {
@@ -561,6 +734,53 @@
             setTimeout(() => {
                 window.location.reload();
             }, 1200);
+        }
+
+        function renderState(state) {
+            participantCountEl.textContent = String(state?.clientCount ?? 0);
+            updateAnswerProgress(state?.answeredCount ?? 0, state?.clientCount ?? 0);
+
+            if (!state || state.phase === "waiting" || !state.question) {
+                showConsoleScreen();
+                return;
+            }
+
+            if (state.phase === "scoreboard") {
+                showScoreboardScreen(state?.leaderboard?.top3 || [], state?.isFinalScoreboard || false);
+                return;
+            }
+
+            const question = state.question;
+            if (question.type === "choice") {
+                setQuestionNumber(choiceQuestionNumberEls, question.questionNumber);
+                showQuestionScreen(question.title, question.options || []);
+                if (state.phase === "answer") {
+                    showAnswerScreen(question.correctIndex);
+                }
+                return;
+            }
+
+            if (question.type === "sortable") {
+                setQuestionNumber(sortableQuestionNumberEls, question.questionNumber);
+                setQuestionNumber(sortableAnswerQuestionNumberEls, question.questionNumber);
+                if (state.phase === "question") {
+                    showSortableQuestionScreen(question.title, question.options || []);
+                } else {
+                    showSortableQuestionScreen(question.title, question.options || []);
+                    showSortableAnswerScreen(question.correctOrder || []);
+                }
+                return;
+            }
+
+            if (question.type === "geoguessr") {
+                setQuestionNumber(geoguessrQuestionNumberEls, question.questionNumber);
+                setQuestionNumber(geoguessrAnswerQuestionNumberEls, question.questionNumber);
+                showGeoguessrScreen(question.title, question.imageUrl || "");
+                if (state.phase === "answer") {
+                    const point = question.answerPoint || { x: 0, y: 0 };
+                    showGeoguessrAnswerScreen(point.x || 0, point.y || 0, question.answerRadius || 30);
+                }
+            }
         }
 
         function connectHostWs() {
@@ -583,6 +803,11 @@
 
                 if (message?.type === "client-count") {
                     participantCountEl.textContent = String(message.count ?? 0);
+                    return;
+                }
+
+                if (message?.type === "state-sync") {
+                    renderState(message.state);
                 }
             });
 
@@ -608,6 +833,7 @@
             });
             screenConsole.hidden = true;
             screenChoice.hidden = screen !== screenChoice;
+            screenScoreboard.hidden = true;
             screenSortable.hidden = screen !== screenSortable;
             screenSortableAnswer.hidden = screen !== screenSortableAnswer;
             screenGeoguessr.hidden = screen !== screenGeoguessr;
@@ -648,6 +874,7 @@
             geoguessrImage.src = imageUrl;
             screenConsole.hidden = true;
             screenChoice.hidden = true;
+            screenScoreboard.hidden = true;
             screenSortable.hidden = true;
             screenSortableAnswer.hidden = true;
             screenGeoguessr.hidden = false;
@@ -684,6 +911,7 @@
 
             screenConsole.hidden = true;
             screenChoice.hidden = true;
+            screenScoreboard.hidden = true;
             screenSortable.hidden = true;
             screenSortableAnswer.hidden = true;
             screenGeoguessr.hidden = true;
@@ -705,31 +933,44 @@
         }
 
         startButton.addEventListener("click", () => {
-            showQuestionScreen("日本で一番高い山は？", ["富士山", "北岳", "奥穂高岳", "槍ヶ岳"]);
+            sendHostNext();
+        });
+
+        resetButton.addEventListener("click", () => {
+            if (!hostWs || hostWs.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            const confirmed = window.confirm("ゲームをリセットします。よろしいですか？");
+            if (!confirmed) {
+                return;
+            }
+
+            hostWs.send(JSON.stringify({ type: "host-reset" }));
         });
 
         nextButton.addEventListener("click", () => {
-            if (choiceScreenState === "question") {
-                showAnswerScreen(1);
-            } else {
-                showSortableQuestionScreen("歴代売上の高い順に並べ替えてください", ["鬼滅の刃", "千と千尋の神隠し", "君の名は。", "もののけ姫"]);
-            }
+            sendHostNext();
         });
 
         nextButtonSortable.addEventListener("click", () => {
-            showSortableAnswerScreen([2, 1, 3, 4]);
+            sendHostNext();
+        });
+
+        nextButtonScoreboard.addEventListener("click", () => {
+            sendHostNext();
         });
 
         nextButtonSortableAnswer.addEventListener("click", () => {
-            showGeoguessrScreen("ここはどこでしょう", "https://www.dropbox.com/scl/fi/snt31vmwwcyfe1u6fd34q/0D2AEA75-C028-4291-B19C-0C310F48AD6A.jpeg?rlkey=3v1d3x3s40gfu3kaoex3lf2ho&st=cqzxt86a&raw=1");
+            sendHostNext();
         });
 
         nextButtonGeoguessr.addEventListener("click", () => {
-            showGeoguessrAnswerScreen(887, 726, 30);
+            sendHostNext();
         });
 
         nextButtonGeoguessrAnswer.addEventListener("click", () => {
-            showConsoleScreen();
+            sendHostNext();
         });
 
         connectHostWs();

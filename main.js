@@ -173,6 +173,8 @@ function buildGeoguessrQuizList() {
 
     return rawGeoguessrQuizList.map((item) => ({
         ...item,
+        問題: item["問題"] || item["問題テキスト"] || "",
+        画像: item["画像"] || item["問題画像"] || "",
         難易度: Number(item["難易度"]),
         正解許容値: Number(item["正解許容値"]),
         正解座標: parseCoordinate(item["正解座標"]),
@@ -227,8 +229,12 @@ const allQuestionList = buildUnifiedQuestionList(choiceQuizList, sortableQuizLis
 const userList = loadUserList("data/user.txt");
 const scoresFilePath = "data/scores.json";
 const scores = loadScores(scoresFilePath, userList);
-
-console.log("userList:", userList);
+const gameState = {
+    phase: "waiting",
+    questionIndex: 0,
+    nextQuestionIndex: null,
+    answersByUser: {},
+};
 
 if (!fs.existsSync(path.join(__dirname, scoresFilePath))) {
     saveScores(scoresFilePath, scores);
@@ -271,6 +277,331 @@ function notifyHostClientCount() {
         type: "client-count",
         count: getConnectedClients().length,
     });
+}
+
+function getConnectedClientUserNames() {
+    return [...new Set(
+        getConnectedClients()
+            .map((client) => String(client.userName || "").trim())
+            .filter((userName) => userName.length > 0)
+    )];
+}
+
+function getAnsweredCount() {
+    const connectedUserNames = new Set(getConnectedClientUserNames());
+    return Object.keys(gameState.answersByUser).filter((userName) => connectedUserNames.has(userName)).length;
+}
+
+function getQuestionType(question) {
+    return question?.クイズ種別 || null;
+}
+
+function resetAnswers() {
+    gameState.answersByUser = {};
+}
+
+function calculateGeoguessrDistance(answerPoint, correctPoint) {
+    const dx = Number(answerPoint?.x) - Number(correctPoint?.x);
+    const dy = Number(answerPoint?.y) - Number(correctPoint?.y);
+    return Math.sqrt((dx * dx) + (dy * dy));
+}
+
+function calculateChoiceScore(question, answer) {
+    return Number(answer?.selectedIndex) === Number(question?.正解) ? 100 : 0;
+}
+
+function calculateSortableScore(question, answer) {
+    const correctOrder = Array.isArray(question?.正解) ? question.正解 : [];
+    const submittedOrder = Array.isArray(answer?.order) ? answer.order : [];
+    let correctCount = 0;
+
+    for (let i = 0; i < correctOrder.length; i += 1) {
+        if (Number(submittedOrder[i]) === Number(correctOrder[i])) {
+            correctCount += 1;
+        }
+    }
+
+    return correctCount * 100;
+}
+
+function calculateGeoguessrScore(question, answer) {
+    const correctPoint = question?.正解座標;
+    const answerPoint = answer?.point;
+    if (!correctPoint || !answerPoint) {
+        return 0;
+    }
+
+    const distance = calculateGeoguessrDistance(answerPoint, correctPoint);
+    if (!Number.isFinite(distance) || distance >= 500) {
+        return 0;
+    }
+
+    return Math.round(100 * (1 - (distance / 500)));
+}
+
+function calculateScoreForAnswer(question, answer) {
+    if (!question || !answer) {
+        return 0;
+    }
+
+    if (question.クイズ種別 === "choice") {
+        return calculateChoiceScore(question, answer);
+    }
+
+    if (question.クイズ種別 === "sortable") {
+        return calculateSortableScore(question, answer);
+    }
+
+    if (question.クイズ種別 === "geoguessr") {
+        return calculateGeoguessrScore(question, answer);
+    }
+
+    return 0;
+}
+
+function applyScoresForCurrentQuestion() {
+    const question = getCurrentQuestion();
+    if (!question) {
+        return;
+    }
+
+    for (const userName of getConnectedClientUserNames()) {
+        const answer = gameState.answersByUser[userName];
+        const delta = calculateScoreForAnswer(question, answer);
+        changeScore(scores, userName, delta);
+    }
+
+    persistScores();
+}
+
+function parseClientAnswer(question, message) {
+    if (!question) {
+        return null;
+    }
+
+    if (question.クイズ種別 === "choice") {
+        const selectedIndex = Number(message?.selectedIndex);
+        if (!Number.isInteger(selectedIndex) || selectedIndex < 1) {
+            return null;
+        }
+        return { selectedIndex };
+    }
+
+    if (question.クイズ種別 === "sortable") {
+        const order = Array.isArray(message?.order)
+            ? message.order.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 1)
+            : [];
+        if (order.length === 0) {
+            return null;
+        }
+        return { order };
+    }
+
+    if (question.クイズ種別 === "geoguessr") {
+        const point = {
+            x: Number(message?.point?.x),
+            y: Number(message?.point?.y),
+        };
+        if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+            return null;
+        }
+        return { point };
+    }
+
+    return null;
+}
+
+function sanitizeQuestion(question) {
+    if (!question) {
+        return null;
+    }
+
+    if (question.クイズ種別 === "choice") {
+        return {
+            type: "choice",
+            title: question.問題,
+            questionNumber: gameState.questionIndex + 1,
+            options: question.選択肢,
+            correctIndex: question.正解,
+        };
+    }
+
+    if (question.クイズ種別 === "sortable") {
+        return {
+            type: "sortable",
+            title: question.問題,
+            questionNumber: gameState.questionIndex + 1,
+            options: question.選択肢,
+            correctOrder: question.正解,
+        };
+    }
+
+    if (question.クイズ種別 === "geoguessr") {
+        return {
+            type: "geoguessr",
+            title: question.問題,
+            questionNumber: gameState.questionIndex + 1,
+            imageUrl: question.画像 || question.imageUrl || question.ImageUrl || "",
+            answerPoint: question.正解座標,
+            answerRadius: question.正解許容値,
+        };
+    }
+
+    return null;
+}
+
+function getCurrentQuestion() {
+    return allQuestionList[gameState.questionIndex] ?? null;
+}
+
+function getSortedLeaderboardEntries() {
+    const connectedUserNames = getConnectedClientUserNames();
+    const entries = connectedUserNames.map((userName) => ({
+        userName,
+        score: Number(scores[userName]) || 0,
+    }));
+
+    entries.sort((a, b) => {
+        if (b.score !== a.score) {
+            return b.score - a.score;
+        }
+
+        return a.userName.localeCompare(b.userName, "ja");
+    });
+
+    return entries;
+}
+
+function buildLeaderboardForWs(ws = null) {
+    const entries = getSortedLeaderboardEntries();
+    const top3 = entries.slice(0, 3);
+
+    let myRank = null;
+    let myScore = null;
+    let pointsToThird = 0;
+
+    if (ws && ws.role === "client" && ws.userName) {
+        const myIndex = entries.findIndex((entry) => entry.userName === ws.userName);
+        if (myIndex >= 0) {
+            myRank = myIndex + 1;
+            myScore = entries[myIndex].score;
+
+            if (myRank > 3 && entries[2]) {
+                pointsToThird = Math.max(0, entries[2].score - myScore);
+            }
+        }
+    }
+
+    return {
+        top3,
+        myRank,
+        myScore,
+        pointsToThird,
+    };
+}
+
+function getMyAnswer(ws) {
+    if (!ws || ws.role !== "client" || !ws.userName) {
+        return null;
+    }
+
+    return gameState.answersByUser[ws.userName] ?? null;
+}
+
+function buildStatePayload(ws = null) {
+    return {
+        type: "state-sync",
+        state: {
+            phase: gameState.phase,
+            questionIndex: gameState.questionIndex,
+            question: sanitizeQuestion(getCurrentQuestion()),
+            clientCount: getConnectedClients().length,
+            answeredCount: getAnsweredCount(),
+            scores,
+            myAnswer: getMyAnswer(ws),
+            leaderboard: buildLeaderboardForWs(ws),
+            isFinalScoreboard: gameState.phase === "scoreboard" && gameState.nextQuestionIndex === 0,
+        },
+    };
+}
+
+function broadcastState() {
+    for (const host of getConnectedHosts()) {
+        sendJson(host, buildStatePayload(host));
+    }
+
+    for (const client of getConnectedClients()) {
+        sendJson(client, buildStatePayload(client));
+    }
+}
+
+function goToFirstQuestion() {
+    if (allQuestionList.length === 0) {
+        gameState.phase = "waiting";
+        gameState.questionIndex = 0;
+        resetAnswers();
+        return;
+    }
+
+    gameState.phase = "question";
+    gameState.questionIndex = 0;
+    gameState.nextQuestionIndex = null;
+    resetAnswers();
+}
+
+function advanceGameState() {
+    if (allQuestionList.length === 0) {
+        gameState.phase = "waiting";
+        gameState.questionIndex = 0;
+        gameState.nextQuestionIndex = null;
+        resetAnswers();
+        return;
+    }
+
+    if (gameState.phase === "waiting") {
+        goToFirstQuestion();
+        return;
+    }
+
+    if (gameState.phase === "question") {
+        applyScoresForCurrentQuestion();
+        gameState.phase = "answer";
+        return;
+    }
+
+    if (gameState.phase === "scoreboard") {
+        if (gameState.nextQuestionIndex === 0) {
+            gameState.phase = "waiting";
+            gameState.questionIndex = 0;
+            gameState.nextQuestionIndex = null;
+            resetAnswers();
+            return;
+        }
+
+        const fallbackNextIndex = (gameState.questionIndex + 1) % allQuestionList.length;
+        gameState.questionIndex = Number.isInteger(gameState.nextQuestionIndex)
+            ? gameState.nextQuestionIndex
+            : fallbackNextIndex;
+        gameState.nextQuestionIndex = null;
+        gameState.phase = "question";
+        resetAnswers();
+        return;
+    }
+
+    const nextIndex = (gameState.questionIndex + 1) % allQuestionList.length;
+    const currentType = getQuestionType(getCurrentQuestion());
+    const nextType = getQuestionType(allQuestionList[nextIndex]);
+
+    if (currentType && nextType && currentType !== nextType) {
+        gameState.phase = "scoreboard";
+        gameState.nextQuestionIndex = nextIndex;
+        return;
+    }
+
+    gameState.phase = "question";
+    gameState.questionIndex = nextIndex;
+    gameState.nextQuestionIndex = null;
+    resetAnswers();
 }
 
 function persistScores() {
@@ -320,6 +651,63 @@ wss.on("connection", (ws) => {
             }
 
             notifyHostClientCount();
+            sendJson(ws, buildStatePayload(ws));
+            broadcastState();
+            return;
+        }
+
+        if (message?.type === "host-next") {
+            if (ws.role !== "host") {
+                sendJson(ws, {
+                    type: "error",
+                    message: "only host can control state",
+                });
+                return;
+            }
+
+            advanceGameState();
+            broadcastState();
+            return;
+        }
+
+        if (message?.type === "host-reset") {
+            if (ws.role !== "host") {
+                sendJson(ws, {
+                    type: "error",
+                    message: "only host can control state",
+                });
+                return;
+            }
+
+            gameState.phase = "waiting";
+            gameState.questionIndex = 0;
+            gameState.nextQuestionIndex = null;
+            resetAnswers();
+            for (const userName of userList) {
+                scores[userName] = 0;
+            }
+            persistScores();
+            broadcastState();
+            return;
+        }
+
+        if (message?.type === "answer-submit") {
+            if (ws.role !== "client" || !ws.userName) {
+                return;
+            }
+
+            if (gameState.phase !== "question") {
+                return;
+            }
+
+            const question = getCurrentQuestion();
+            const parsedAnswer = parseClientAnswer(question, message);
+            if (!parsedAnswer) {
+                return;
+            }
+
+            gameState.answersByUser[ws.userName] = parsedAnswer;
+            broadcastState();
             return;
         }
 
@@ -328,7 +716,11 @@ wss.on("connection", (ws) => {
 
     ws.on("close", () => {
         console.log("WebSocket client disconnected");
+        if (ws.role === "client" && ws.userName) {
+            delete gameState.answersByUser[ws.userName];
+        }
         notifyHostClientCount();
+        broadcastState();
     });
 });
 
