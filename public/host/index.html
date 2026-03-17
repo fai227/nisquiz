@@ -279,6 +279,25 @@
             opacity: 0.3;
         }
 
+        .connection-lost {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.68);
+            color: #fff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 700;
+            padding: 24px;
+            z-index: 1000;
+        }
+
+        .connection-lost.show {
+            display: flex;
+        }
+
         @media (max-width: 640px) {
             .quiz-banner {
                 grid-template-columns: 1fr;
@@ -306,6 +325,7 @@
 </head>
 
 <body>
+    <div id="connection-lost" class="connection-lost">接続が切れました。ページをリロードします。</div>
     <main>
         <section id="screen-console" class="screen">
             <div class="console-layout">
@@ -496,6 +516,8 @@
         const nextButtonSortableAnswer = document.getElementById("next-button-sortable-answer");
         const nextButtonGeoguessr = document.getElementById("next-button-geoguessr");
         const nextButtonGeoguessrAnswer = document.getElementById("next-button-geoguessr-answer");
+        const participantCountEl = document.getElementById("participant-count");
+        const connectionLostEl = document.getElementById("connection-lost");
 
         const choiceQuestionText = screenChoice.querySelector(".question-area p");
         const choiceItems = Array.from(screenChoice.querySelectorAll(".choice-item"));
@@ -518,6 +540,7 @@
         let currentGeoguessrQuestion = "";
         let currentGeoguessrImageUrl = "";
         const geoguessrMapImageUrl = "/images/map.jpg";
+        let hostWs = null;
 
         function showConsoleScreen() {
             screenConsole.hidden = false;
@@ -526,6 +549,50 @@
             screenSortableAnswer.hidden = true;
             screenGeoguessr.hidden = true;
             screenGeoguessrAnswer.hidden = true;
+        }
+
+        function getWsUrl() {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            return `${protocol}//${window.location.host}`;
+        }
+
+        function showConnectionLostAndReload() {
+            connectionLostEl.classList.add("show");
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        }
+
+        function connectHostWs() {
+            hostWs = new WebSocket(getWsUrl());
+
+            hostWs.addEventListener("open", () => {
+                hostWs.send(JSON.stringify({
+                    type: "register",
+                    role: "host",
+                }));
+            });
+
+            hostWs.addEventListener("message", (event) => {
+                let message;
+                try {
+                    message = JSON.parse(event.data);
+                } catch (_error) {
+                    return;
+                }
+
+                if (message?.type === "client-count") {
+                    participantCountEl.textContent = String(message.count ?? 0);
+                }
+            });
+
+            hostWs.addEventListener("close", () => {
+                showConnectionLostAndReload();
+            });
+
+            hostWs.addEventListener("error", () => {
+                showConnectionLostAndReload();
+            });
         }
 
         function renderQuizScreen(screen, questionElement, items, question, choices, labels) {
@@ -664,6 +731,8 @@
         nextButtonGeoguessrAnswer.addEventListener("click", () => {
             showConsoleScreen();
         });
+
+        connectHostWs();
     </script>
 </body>
 

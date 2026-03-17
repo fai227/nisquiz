@@ -341,10 +341,30 @@
             font-size: 1rem;
             cursor: pointer;
         }
+
+        .connection-lost {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.68);
+            color: #fff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 1.6rem;
+            font-weight: 700;
+            padding: 24px;
+            z-index: 1000;
+        }
+
+        .connection-lost.show {
+            display: flex;
+        }
     </style>
 </head>
 
 <body>
+    <div id="connection-lost" class="connection-lost">接続が切れました。ページをリロードします。</div>
     <main>
         <section id="screen-player-select" class="screen">
             <div class="player-waiting">
@@ -550,6 +570,8 @@
         const geoguessrQuestionNumberEl = document.getElementById("geoguessr-question-number");
         const geoguessrCanvas = document.getElementById("geoguessr-canvas");
         const geoguessrSubmitButton = document.getElementById("geoguessr-submit-button");
+        const connectionLostEl = document.getElementById("connection-lost");
+        const PLAYER_STORAGE_KEY = "nisquiz-player-name";
 
         let playersData = [];
         let currentPlayerId = null;
@@ -563,6 +585,7 @@
         let geoguessrPin = null;
         let geoguessrDragging = false;
         let geoguessrDragPos = null;
+        let clientWs = null;
 
         function showScreen(index) {
             screens.forEach((screen, i) => {
@@ -718,6 +741,22 @@
             showScreen(1);
         }
 
+        function showTitleScreen() {
+            showScreen(0);
+        }
+
+        function showChoiceQuizScreen(options) {
+            showChoiceScreen(currentChoiceQuestionNumber, options);
+        }
+
+        function showSortableQuizScreen(options) {
+            showSortableScreen(options);
+        }
+
+        function showGeoguessrQuizScreen() {
+            showGeoguessrScreen();
+        }
+
         // players: Array<{ id: string | number, displayName: string }>
         function showPlayerWaitingScreen(players) {
             playersData = [...players];
@@ -730,15 +769,77 @@
             });
         }
 
-        showPlayerWaitingScreen([
-            { id: 1, displayName: "プレイヤー1" },
-            { id: 2, displayName: "プレイヤー2" },
-            { id: 3, displayName: "プレイヤー3" },
-        ]);
+        function getWsUrl() {
+            const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            return `${protocol}//${window.location.host}`;
+        }
 
-        updateBanner();
+        function showConnectionLostAndReload() {
+            connectionLostEl.classList.add("show");
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
+        }
 
-        showScreen(0);
+        async function fetchUserList() {
+            const response = await fetch("/api/users", { method: "GET" });
+            if (!response.ok) {
+                throw new Error(`failed to fetch users: ${response.status}`);
+            }
+            const payload = await response.json();
+            const users = Array.isArray(payload?.users) ? payload.users : [];
+            return users
+                .map((name) => String(name).trim())
+                .filter((name) => name.length > 0)
+                .map((name) => ({ id: name, displayName: name }));
+        }
+
+        function connectClientWs(userName) {
+            if (clientWs && clientWs.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            clientWs = new WebSocket(getWsUrl());
+
+            clientWs.addEventListener("open", () => {
+                clientWs.send(JSON.stringify({
+                    type: "register",
+                    role: "client",
+                    userName,
+                }));
+                showWaitingScreen("開始までお待ちください", true);
+            });
+
+            clientWs.addEventListener("close", () => {
+                showConnectionLostAndReload();
+            });
+
+            clientWs.addEventListener("error", () => {
+                showConnectionLostAndReload();
+            });
+        }
+
+        async function initializeApp() {
+            const savedName = localStorage.getItem(PLAYER_STORAGE_KEY);
+
+            if (savedName) {
+                playersData = [{ id: savedName, displayName: savedName }];
+                currentPlayerId = savedName;
+                updateBanner();
+                connectClientWs(savedName);
+                return;
+            }
+
+            try {
+                const users = await fetchUserList();
+                showPlayerWaitingScreen(users);
+                currentPlayerId = users[0]?.id ?? null;
+                updateBanner();
+                showTitleScreen();
+            } catch (_error) {
+                showConnectionLostAndReload();
+            }
+        }
 
         function getGeoguessrCanvasPos(clientX, clientY) {
             const rect = geoguessrCanvas.getBoundingClientRect();
@@ -812,20 +913,20 @@
         }
 
         joinButton.addEventListener("click", () => {
-            currentPlayerId = playerSelect.value;
-            updateBanner();
-            const r = Math.random();
-            if (r < 1 / 3) {
-                showChoiceScreen(1, ["選択肢1", "選択肢2", "選択肢3", "選択肢4"]);
-            } else if (r < 2 / 3) {
-                showSortableScreen(["選択肢1", "選択肢2", "選択肢3", "選択肢4"]);
-            } else {
-                showGeoguessrScreen();
+            const selected = playerSelect.value;
+            if (!selected) {
+                return;
             }
+
+            currentPlayerId = selected;
+            localStorage.setItem(PLAYER_STORAGE_KEY, selected);
+            updateBanner();
+            connectClientWs(selected);
         });
 
         changePlayerButton.addEventListener("click", () => {
-            showChoiceScreen(1, ["選択肢1", "選択肢2", "選択肢3", "選択肢4"]);
+            localStorage.removeItem(PLAYER_STORAGE_KEY);
+            window.location.reload();
         });
 
         choiceSubmitButton.addEventListener("click", () => {
@@ -893,11 +994,18 @@
         });
 
         window.changeScore = changeScore;
+        window.showTitleScreen = showTitleScreen;
+        window.showWaitingScreen = showWaitingScreen;
         window.showChoiceScreen = showChoiceScreen;
         window.showChoiceAnswerScreen = showChoiceAnswerScreen;
+        window.showChoiceQuizScreen = showChoiceQuizScreen;
         window.showSortableScreen = showSortableScreen;
         window.showSortableAnswerScreen = showSortableAnswerScreen;
+        window.showSortableQuizScreen = showSortableQuizScreen;
         window.showGeoguessrScreen = showGeoguessrScreen;
+        window.showGeoguessrQuizScreen = showGeoguessrQuizScreen;
+
+        initializeApp();
     </script>
 </body>
 
