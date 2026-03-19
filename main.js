@@ -10,6 +10,9 @@ const port = 3000;
 
 app.use(express.static("public"));
 
+app.set("trust proxy", 1);     // ALB 配下向け
+app.get("/health", (_req, res) => res.status(200).send("ok"));
+
 app.get("/api/users", (_req, res) => {
     res.json({
         users: userList,
