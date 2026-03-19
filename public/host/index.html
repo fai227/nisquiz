@@ -855,7 +855,6 @@
 
         function showScoreboardScreen(top3, isFinal = false) {
             scoreboardBannerTitle.textContent = isFinal ? "最終結果" : "現在の順位";
-            nextButtonScoreboard.textContent = isFinal ? "終了" : "次へ";
             const rankLabels = ["1位", "2位", "3位"];
             hostTop3ListEl.innerHTML = "";
 
@@ -934,6 +933,56 @@
             });
         }
 
+        function getNextButtonLabel(state) {
+            const nextScreen = state?.nextScreen;
+            if (!nextScreen || typeof nextScreen !== "object") {
+                return "次へ";
+            }
+
+            if (nextScreen.kind === "question") {
+                const nextQuestionNumber = Number(nextScreen.questionNumber);
+                if (Number.isInteger(nextQuestionNumber) && nextQuestionNumber >= 1) {
+                    return `${nextQuestionNumber}問目へ`;
+                }
+                return "次の問題へ";
+            }
+
+            if (nextScreen.kind === "answer") {
+                return "解答へ";
+            }
+
+            if (nextScreen.kind === "slide") {
+                return "問題説明へ";
+            }
+
+            if (nextScreen.kind === "scoreboard") {
+                return nextScreen.isFinalScoreboard ? "最終結果へ" : "現在の順位へ";
+            }
+
+            if (nextScreen.kind === "waiting") {
+                return "終了";
+            }
+
+            return "次へ";
+        }
+
+        function updateNextButtonLabels(state) {
+            const label = getNextButtonLabel(state);
+            [
+                nextButtonSlide,
+                nextButton,
+                nextButtonSortable,
+                nextButtonScoreboard,
+                nextButtonSortableAnswer,
+                nextButtonGeoguessr,
+                nextButtonGeoguessrAnswer,
+            ].forEach((button) => {
+                if (button) {
+                    button.textContent = label;
+                }
+            });
+        }
+
         function getDifficultyStars(value) {
             const level = Math.max(1, Math.min(5, Number(value) || 1));
             return `${"★".repeat(level)}${"☆".repeat(5 - level)}`;
@@ -965,6 +1014,7 @@
         function renderState(state) {
             updateAnswerProgress(state?.answeredCount ?? 0, state?.clientCount ?? 0);
             updateParticipantList(state);
+            updateNextButtonLabels(state);
 
             if (!state || state.phase === "waiting" || !state.question) {
                 showConsoleScreen();

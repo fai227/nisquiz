@@ -655,6 +655,100 @@ function getChoiceAnswerCounts() {
     return counts;
 }
 
+function buildSlideQueueForQuestionIndex(questionIndex, includeOutline = false) {
+    const slideKeys = [];
+    if (includeOutline) {
+        slideKeys.push("outline");
+    }
+
+    const question = allQuestionList[questionIndex] ?? null;
+    const typeSlideKey = getSlideKeyForQuestionType(getQuestionType(question));
+    if (typeSlideKey) {
+        slideKeys.push(typeSlideKey);
+    }
+
+    return slideKeys.filter((key) => typeof key === "string" && key.length > 0);
+}
+
+function getNextScreenInfo() {
+    if (allQuestionList.length === 0) {
+        return { kind: "waiting" };
+    }
+
+    if (gameState.phase === "waiting") {
+        const firstQuestionIndex = 0;
+        const firstSlides = buildSlideQueueForQuestionIndex(firstQuestionIndex, true);
+        if (firstSlides.length > 0) {
+            return { kind: "slide" };
+        }
+
+        return {
+            kind: "question",
+            questionNumber: firstQuestionIndex + 1,
+            questionType: getQuestionType(allQuestionList[firstQuestionIndex]),
+        };
+    }
+
+    if (gameState.phase === "slide") {
+        if (Array.isArray(gameState.pendingSlideKeys) && gameState.pendingSlideKeys.length > 0) {
+            return { kind: "slide" };
+        }
+
+        return {
+            kind: "question",
+            questionNumber: gameState.questionIndex + 1,
+            questionType: getQuestionType(getCurrentQuestion()),
+        };
+    }
+
+    if (gameState.phase === "question") {
+        return {
+            kind: "answer",
+            questionNumber: gameState.questionIndex + 1,
+            questionType: getQuestionType(getCurrentQuestion()),
+        };
+    }
+
+    if (gameState.phase === "scoreboard") {
+        if (gameState.nextQuestionIndex === 0) {
+            return { kind: "waiting" };
+        }
+
+        const fallbackNextIndex = (gameState.questionIndex + 1) % allQuestionList.length;
+        const targetQuestionIndex = Number.isInteger(gameState.nextQuestionIndex)
+            ? gameState.nextQuestionIndex
+            : fallbackNextIndex;
+        const needsTypeSlide = shouldShowTypeIntroSlide(targetQuestionIndex);
+
+        if (needsTypeSlide) {
+            return { kind: "slide" };
+        }
+
+        return {
+            kind: "question",
+            questionNumber: targetQuestionIndex + 1,
+            questionType: getQuestionType(allQuestionList[targetQuestionIndex]),
+        };
+    }
+
+    const nextIndex = (gameState.questionIndex + 1) % allQuestionList.length;
+    const currentType = getQuestionType(getCurrentQuestion());
+    const nextType = getQuestionType(allQuestionList[nextIndex]);
+
+    if (currentType && nextType && currentType !== nextType) {
+        return {
+            kind: "scoreboard",
+            isFinalScoreboard: nextIndex === 0,
+        };
+    }
+
+    return {
+        kind: "question",
+        questionNumber: nextIndex + 1,
+        questionType: nextType,
+    };
+}
+
 function buildStatePayload(ws = null) {
     const connectedUsers = getConnectedClientUserNames();
 
@@ -674,6 +768,7 @@ function buildStatePayload(ws = null) {
             leaderboard: buildLeaderboardForWs(ws),
             choiceAnswerCounts: getChoiceAnswerCounts(),
             slideImageUrl: getSlideImageUrl(),
+            nextScreen: getNextScreenInfo(),
             isFinalScoreboard: gameState.phase === "scoreboard" && gameState.nextQuestionIndex === 0,
         },
     };
