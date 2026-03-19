@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Host</title>
+    <title>NISQUIZ ホスト</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
@@ -50,6 +50,8 @@
             justify-content: center;
             height: 100%;
             gap: 32px;
+            position: relative;
+            width: 100%;
         }
 
         .console-logo {
@@ -106,6 +108,75 @@
             background: #666;
         }
 
+        .console-participant-list {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            min-width: 260px;
+            max-width: 32vw;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 2px solid #e6d7f8;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+            z-index: 3;
+        }
+
+        .console-participant-list-title {
+            margin: 0;
+            color: #555;
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .console-participant-names {
+            list-style: none;
+            margin: 8px 0 0;
+            padding: 0;
+            display: grid;
+            gap: 4px;
+            color: #222;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .slide-layout {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            place-items: center;
+            background: #111;
+            overflow: hidden;
+        }
+
+        .slide-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .slide-next-button {
+            position: absolute;
+            right: 12px;
+            top: 8px;
+            width: 160px;
+            min-height: 44px;
+            border: none;
+            border-radius: 6px;
+            background: #7a4bb7;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .slide-next-button:hover {
+            background: #6a3da5;
+        }
+
         .quiz-layout {
             display: grid;
             gap: 16px;
@@ -119,6 +190,7 @@
             align-items: center;
             gap: 12px;
             height: 100px;
+            position: relative;
         }
 
         .quiz-banner-left {
@@ -154,22 +226,38 @@
         }
 
         .quiz-banner-right {
-            justify-self: end;
+            position: absolute;
+            right: 12px;
+            top: 8px;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
             gap: 8px;
             color: #555;
+            z-index: 2;
+        }
+
+        .quiz-banner-right span {
+            order: 2;
+            width: 160px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            line-height: 1;
+            text-align: center;
         }
 
         .quiz-banner-right button {
+            order: 1;
             background: #7a4bb7;
             color: #fff;
             border: none;
             border-radius: 6px;
             padding: 8px 16px;
             cursor: pointer;
-            width: 100%;
+            width: 160px;
+            min-height: 44px;
+            font-size: 1.1rem;
+            font-weight: 700;
         }
 
         .quiz-banner-right button:hover {
@@ -180,8 +268,34 @@
             width: 100%;
             font-size: 7rem;
             font-weight: 800;
-            margin: 24px 0;
             text-align: center;
+            position: relative;
+        }
+
+        .question-area p {
+            line-break: strict;
+        }
+
+        .question-meta-top,
+        .question-meta-bottom {
+            position: absolute;
+            right: 8px;
+            font-size: 3rem;
+            font-weight: 700;
+            color: #444;
+            background: rgba(255, 255, 255, 0.88);
+            border-radius: 8px;
+            padding: 4px 10px;
+            line-height: 1.1;
+            pointer-events: none;
+        }
+
+        .question-meta-top {
+            top: 6px;
+        }
+
+        .question-meta-bottom {
+            bottom: 6px;
         }
 
         .question-area-small {
@@ -279,6 +393,7 @@
             font-weight: 800;
             padding: 0 24px;
             gap: 24px;
+            position: relative;
         }
 
         .choice-num {
@@ -302,6 +417,21 @@
 
         .choice-item.choice-wrong {
             opacity: 0.3;
+        }
+
+        .choice-vote-count {
+            position: absolute;
+            right: 12px;
+            bottom: 8px;
+            font-size: 2.8rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
+            background: rgba(40, 40, 40, 0.62);
+            border-radius: 999px;
+            padding: 10px 20px;
+            z-index: 2;
+            pointer-events: none;
         }
 
         .connection-lost {
@@ -378,6 +508,11 @@
                 justify-self: start;
             }
 
+            .quiz-banner-right {
+                right: 8px;
+                top: 6px;
+            }
+
             .choices-grid {
                 grid-template-columns: 1fr;
             }
@@ -399,11 +534,22 @@
         <section id="screen-console" class="screen">
             <div class="console-layout">
                 <img src="../images/logo.svg" alt="ロゴ" class="console-logo" />
-                <p class="console-participants">現在の参加人数: <span id="participant-count">0</span>人</p>
                 <div class="console-buttons">
                     <button id="start-button" class="console-start" type="button">ゲーム開始</button>
                     <button id="reset-button" class="console-reset" type="button">リセット</button>
                 </div>
+                <aside class="console-participant-list" aria-label="現在の参加者一覧">
+                    <p class="console-participant-list-title">現在の参加者: <span
+                            id="participant-count-connected">0</span>/<span id="participant-count-total">0</span>人</p>
+                    <ul id="participant-name-list" class="console-participant-names"></ul>
+                </aside>
+            </div>
+        </section>
+
+        <section id="screen-slide" class="screen" hidden>
+            <div class="slide-layout">
+                <button id="next-button-slide" class="slide-next-button" type="button">次へ</button>
+                <img id="slide-image" class="slide-image" src="" alt="説明スライド" />
             </div>
         </section>
 
@@ -596,6 +742,7 @@
         "use strict";
 
         const screenConsole = document.getElementById("screen-console");
+        const screenSlide = document.getElementById("screen-slide");
         const screenChoice = document.getElementById("screen-choice");
         const screenScoreboard = document.getElementById("screen-scoreboard");
         const screenSortable = document.getElementById("screen-sortable");
@@ -604,6 +751,7 @@
         const screenGeoguessrAnswer = document.getElementById("screen-geoguessr-answer");
         const startButton = document.getElementById("start-button");
         const resetButton = document.getElementById("reset-button");
+        const nextButtonSlide = document.getElementById("next-button-slide");
         const nextButton = document.getElementById("next-button");
         const nextButtonSortable = document.getElementById("next-button-sortable");
         const nextButtonScoreboard = document.getElementById("next-button-scoreboard");
@@ -611,7 +759,10 @@
         const nextButtonSortableAnswer = document.getElementById("next-button-sortable-answer");
         const nextButtonGeoguessr = document.getElementById("next-button-geoguessr");
         const nextButtonGeoguessrAnswer = document.getElementById("next-button-geoguessr-answer");
-        const participantCountEl = document.getElementById("participant-count");
+        const slideImageEl = document.getElementById("slide-image");
+        const participantCountConnectedEl = document.getElementById("participant-count-connected");
+        const participantCountTotalEl = document.getElementById("participant-count-total");
+        const participantNameListEl = document.getElementById("participant-name-list");
         const connectionLostEl = document.getElementById("connection-lost");
         const choiceQuestionNumberEls = Array.from(screenChoice.querySelectorAll(".quiz-banner-center span"));
         const sortableQuestionNumberEls = Array.from(screenSortable.querySelectorAll(".quiz-banner-center span"));
@@ -629,6 +780,17 @@
 
         const choiceQuestionText = screenChoice.querySelector(".question-area p");
         const choiceItems = Array.from(screenChoice.querySelectorAll(".choice-item"));
+        const choiceVoteCountEls = choiceItems.map((item) => {
+            let voteCountEl = item.querySelector(".choice-vote-count");
+            if (!voteCountEl) {
+                voteCountEl = document.createElement("span");
+                voteCountEl.className = "choice-vote-count";
+                voteCountEl.textContent = "0人";
+                voteCountEl.hidden = true;
+                item.appendChild(voteCountEl);
+            }
+            return voteCountEl;
+        });
         const sortableQuestionText = screenSortable.querySelector(".question-area p");
         const sortableItems = Array.from(screenSortable.querySelectorAll(".choice-item"));
         const sortableAnswerQuestionText = screenSortableAnswer.querySelector(".question-area p");
@@ -639,6 +801,24 @@
         const geoguessrAnswerImage = document.getElementById("geoguessr-answer-image");
         const geoguessrMapCanvas = document.getElementById("geoguessr-map-canvas");
         const geoguessrMapContext = geoguessrMapCanvas.getContext("2d");
+        const questionAreaEls = Array.from(document.querySelectorAll(".question-area"));
+        const questionMetaEls = questionAreaEls.map((area) => {
+            let difficultyEl = area.querySelector(".question-meta-top");
+            if (!difficultyEl) {
+                difficultyEl = document.createElement("span");
+                difficultyEl.className = "question-meta-top";
+                area.appendChild(difficultyEl);
+            }
+
+            let authorEl = area.querySelector(".question-meta-bottom");
+            if (!authorEl) {
+                authorEl = document.createElement("span");
+                authorEl.className = "question-meta-bottom";
+                area.appendChild(authorEl);
+            }
+
+            return { difficultyEl, authorEl };
+        });
 
         // 択一問題画面の状態: "question" | "answer"
         let choiceScreenState = "question";
@@ -652,6 +832,19 @@
 
         function showConsoleScreen() {
             screenConsole.hidden = false;
+            screenSlide.hidden = true;
+            screenChoice.hidden = true;
+            screenScoreboard.hidden = true;
+            screenSortable.hidden = true;
+            screenSortableAnswer.hidden = true;
+            screenGeoguessr.hidden = true;
+            screenGeoguessrAnswer.hidden = true;
+        }
+
+        function showSlideScreen(imageUrl) {
+            slideImageEl.src = imageUrl || "";
+            screenConsole.hidden = true;
+            screenSlide.hidden = false;
             screenChoice.hidden = true;
             screenScoreboard.hidden = true;
             screenSortable.hidden = true;
@@ -724,6 +917,39 @@
             });
         }
 
+        function updateParticipantList(state) {
+            const connectedUsers = Array.isArray(state?.connectedUsers) ? state.connectedUsers : [];
+            const total = Number(state?.userCountTotal);
+
+            participantCountConnectedEl.textContent = String(connectedUsers.length);
+            if (Number.isFinite(total) && total >= 0) {
+                participantCountTotalEl.textContent = String(total);
+            }
+
+            participantNameListEl.innerHTML = "";
+            connectedUsers.forEach((name) => {
+                const li = document.createElement("li");
+                li.textContent = String(name);
+                participantNameListEl.appendChild(li);
+            });
+        }
+
+        function getDifficultyStars(value) {
+            const level = Math.max(1, Math.min(5, Number(value) || 1));
+            return `${"★".repeat(level)}${"☆".repeat(5 - level)}`;
+        }
+
+        function updateQuestionMeta(question) {
+            const difficultyText = `${getDifficultyStars(question?.difficulty)}`;
+            const author = String(question?.author || "").trim() || "-";
+            const authorText = `作成者: ${author}`;
+
+            questionMetaEls.forEach(({ difficultyEl, authorEl }) => {
+                difficultyEl.textContent = difficultyText;
+                authorEl.textContent = authorText;
+            });
+        }
+
         function getWsUrl() {
             const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
             return `${protocol}//${window.location.host}`;
@@ -737,8 +963,8 @@
         }
 
         function renderState(state) {
-            participantCountEl.textContent = String(state?.clientCount ?? 0);
             updateAnswerProgress(state?.answeredCount ?? 0, state?.clientCount ?? 0);
+            updateParticipantList(state);
 
             if (!state || state.phase === "waiting" || !state.question) {
                 showConsoleScreen();
@@ -750,12 +976,18 @@
                 return;
             }
 
+            if (state.phase === "slide") {
+                showSlideScreen(state?.slideImageUrl || "");
+                return;
+            }
+
             const question = state.question;
+            updateQuestionMeta(question);
             if (question.type === "choice") {
                 setQuestionNumber(choiceQuestionNumberEls, question.questionNumber);
                 showQuestionScreen(question.title, question.options || []);
                 if (state.phase === "answer") {
-                    showAnswerScreen(question.correctIndex);
+                    showAnswerScreen(question.correctIndex, state.choiceAnswerCounts || []);
                 }
                 return;
             }
@@ -802,7 +1034,7 @@
                 }
 
                 if (message?.type === "client-count") {
-                    participantCountEl.textContent = String(message.count ?? 0);
+                    participantCountConnectedEl.textContent = String(message.count ?? 0);
                     return;
                 }
 
@@ -828,10 +1060,16 @@
                 if (choiceNumber) {
                     choiceNumber.textContent = `${labels?.[i] ?? i + 1}.`;
                 }
+                const voteCountEl = item.querySelector(".choice-vote-count");
+                if (voteCountEl) {
+                    voteCountEl.hidden = true;
+                    voteCountEl.textContent = "0人";
+                }
                 item.classList.remove("choice-correct", "choice-wrong");
                 item.hidden = !choices[i];
             });
             screenConsole.hidden = true;
+            screenSlide.hidden = true;
             screenChoice.hidden = screen !== screenChoice;
             screenScoreboard.hidden = true;
             screenSortable.hidden = screen !== screenSortable;
@@ -873,6 +1111,7 @@
             geoguessrQuestionText.textContent = question;
             geoguessrImage.src = imageUrl;
             screenConsole.hidden = true;
+            screenSlide.hidden = true;
             screenChoice.hidden = true;
             screenScoreboard.hidden = true;
             screenSortable.hidden = true;
@@ -910,6 +1149,7 @@
             drawGeoguessrMapMarker(x, y, r);
 
             screenConsole.hidden = true;
+            screenSlide.hidden = true;
             screenChoice.hidden = true;
             screenScoreboard.hidden = true;
             screenSortable.hidden = true;
@@ -919,7 +1159,7 @@
         }
 
         // correctIndex: 1-based
-        function showAnswerScreen(correctIndex) {
+        function showAnswerScreen(correctIndex, choiceAnswerCounts = []) {
             currentAnswer = correctIndex;
             choiceItems.forEach((item, i) => {
                 item.classList.remove("choice-correct", "choice-wrong");
@@ -927,6 +1167,13 @@
                     item.classList.add("choice-correct");
                 } else {
                     item.classList.add("choice-wrong");
+                }
+
+                const voteCountEl = choiceVoteCountEls[i];
+                if (voteCountEl && !item.hidden) {
+                    const count = Number(choiceAnswerCounts?.[i]) || 0;
+                    voteCountEl.textContent = `${count}人`;
+                    voteCountEl.hidden = false;
                 }
             });
             choiceScreenState = "answer";
@@ -950,6 +1197,10 @@
         });
 
         nextButton.addEventListener("click", () => {
+            sendHostNext();
+        });
+
+        nextButtonSlide.addEventListener("click", () => {
             sendHostNext();
         });
 

@@ -182,14 +182,15 @@ function buildGeoguessrQuizList() {
 }
 
 function sortByDifficulty(list) {
-    return [...list].sort((a, b) => {
+    // Shuffle first so items with the same difficulty are randomized.
+    return shuffleArray(list).sort((a, b) => {
         const diffA = Number.isFinite(a?.難易度) ? a.難易度 : Number.POSITIVE_INFINITY;
         const diffB = Number.isFinite(b?.難易度) ? b.難易度 : Number.POSITIVE_INFINITY;
         return diffA - diffB;
     });
 }
 
-function splitEasyAndHard(sortedList, easyCount = 5) {
+function splitEasyAndHard(sortedList, easyCount = Math.ceil(sortedList.length / 2)) {
     return {
         easy: sortedList.slice(0, easyCount),
         hard: sortedList.slice(easyCount),
@@ -208,9 +209,9 @@ function buildUnifiedQuestionList(choiceList, sortableList, geoguessrList) {
     const sortableSorted = sortByDifficulty(sortableList);
     const geoguessrSorted = sortByDifficulty(geoguessrList);
 
-    const { easy: choiceEasy, hard: choiceHard } = splitEasyAndHard(choiceSorted, 5);
-    const { easy: sortableEasy, hard: sortableHard } = splitEasyAndHard(sortableSorted, 5);
-    const { easy: geoguessrEasy, hard: geoguessrHard } = splitEasyAndHard(geoguessrSorted, 5);
+    const { easy: choiceEasy, hard: choiceHard } = splitEasyAndHard(choiceSorted);
+    const { easy: sortableEasy, hard: sortableHard } = splitEasyAndHard(sortableSorted);
+    const { easy: geoguessrEasy, hard: geoguessrHard } = splitEasyAndHard(geoguessrSorted);
 
     return [
         ...withQuizType(choiceEasy, "choice"),
@@ -226,6 +227,22 @@ const choiceQuizList = buildChoiceQuizList();
 const sortableQuizList = buildSortableQuizList();
 const geoguessrQuizList = buildGeoguessrQuizList();
 const allQuestionList = buildUnifiedQuestionList(choiceQuizList, sortableQuizList, geoguessrQuizList);
+
+function buildFirstQuestionIndexByType(questionList) {
+    const map = {};
+    for (let i = 0; i < questionList.length; i += 1) {
+        const type = getQuestionType(questionList[i]);
+        if (!type) {
+            continue;
+        }
+        if (!(type in map)) {
+            map[type] = i;
+        }
+    }
+    return map;
+}
+
+const firstQuestionIndexByType = buildFirstQuestionIndexByType(allQuestionList);
 const userList = loadUserList("data/user.txt");
 const scoresFilePath = "data/scores.json";
 const scores = loadScores(scoresFilePath, userList);
@@ -233,6 +250,8 @@ const gameState = {
     phase: "waiting",
     questionIndex: 0,
     nextQuestionIndex: null,
+    currentSlideKey: null,
+    pendingSlideKeys: [],
     answersByUser: {},
 };
 
@@ -294,6 +313,67 @@ function getAnsweredCount() {
 
 function getQuestionType(question) {
     return question?.クイズ種別 || null;
+}
+
+function getSlideKeyForQuestionType(type) {
+    if (type === "choice") {
+        return "choice";
+    }
+
+    if (type === "sortable") {
+        return "sortable";
+    }
+
+    if (type === "geoguessr") {
+        return "geoguessr";
+    }
+
+    return null;
+}
+
+function shouldShowTypeIntroSlide(nextQuestionIndex) {
+    const question = allQuestionList[nextQuestionIndex] ?? null;
+    const type = getQuestionType(question);
+    if (!type) {
+        return false;
+    }
+
+    return firstQuestionIndexByType[type] === nextQuestionIndex;
+}
+
+function resetSlideState() {
+    gameState.currentSlideKey = null;
+    gameState.pendingSlideKeys = [];
+}
+
+function getSlideImageUrl() {
+    if (gameState.phase !== "slide" || !gameState.currentSlideKey) {
+        return "";
+    }
+
+    return `/slides/${gameState.currentSlideKey}.png`;
+}
+
+function startSlidePhase(questionIndex, slideKeys) {
+    const queue = Array.isArray(slideKeys)
+        ? slideKeys.filter((key) => typeof key === "string" && key.length > 0)
+        : [];
+
+    if (queue.length === 0) {
+        gameState.phase = "question";
+        gameState.questionIndex = questionIndex;
+        gameState.nextQuestionIndex = null;
+        resetSlideState();
+        resetAnswers();
+        return;
+    }
+
+    gameState.phase = "slide";
+    gameState.questionIndex = questionIndex;
+    gameState.nextQuestionIndex = null;
+    gameState.currentSlideKey = queue[0];
+    gameState.pendingSlideKeys = queue.slice(1);
+    resetAnswers();
 }
 
 function resetAnswers() {
@@ -416,11 +496,17 @@ function sanitizeQuestion(question) {
         return null;
     }
 
+    const author = String(question.作成者 || "").trim();
+    const difficultyValue = Number(question.難易度);
+    const difficulty = Number.isFinite(difficultyValue) ? difficultyValue : null;
+
     if (question.クイズ種別 === "choice") {
         return {
             type: "choice",
             title: question.問題,
             questionNumber: gameState.questionIndex + 1,
+            author,
+            difficulty,
             options: question.選択肢,
             correctIndex: question.正解,
         };
@@ -431,6 +517,8 @@ function sanitizeQuestion(question) {
             type: "sortable",
             title: question.問題,
             questionNumber: gameState.questionIndex + 1,
+            author,
+            difficulty,
             options: question.選択肢,
             correctOrder: question.正解,
         };
@@ -441,6 +529,8 @@ function sanitizeQuestion(question) {
             type: "geoguessr",
             title: question.問題,
             questionNumber: gameState.questionIndex + 1,
+            author,
+            difficulty,
             imageUrl: question.画像 || question.imageUrl || question.ImageUrl || "",
             answerPoint: question.正解座標,
             answerRadius: question.正解許容値,
@@ -508,7 +598,35 @@ function getMyAnswer(ws) {
     return gameState.answersByUser[ws.userName] ?? null;
 }
 
+function getChoiceAnswerCounts() {
+    const question = getCurrentQuestion();
+    if (question?.クイズ種別 !== "choice") {
+        return [];
+    }
+
+    const optionCount = Array.isArray(question?.選択肢) ? question.選択肢.length : 0;
+    const counts = Array.from({ length: optionCount }, () => 0);
+    const connectedUserNames = new Set(getConnectedClientUserNames());
+
+    for (const [userName, answer] of Object.entries(gameState.answersByUser)) {
+        if (!connectedUserNames.has(userName)) {
+            continue;
+        }
+
+        const selectedIndex = Number(answer?.selectedIndex);
+        if (!Number.isInteger(selectedIndex) || selectedIndex < 1 || selectedIndex > optionCount) {
+            continue;
+        }
+
+        counts[selectedIndex - 1] += 1;
+    }
+
+    return counts;
+}
+
 function buildStatePayload(ws = null) {
+    const connectedUsers = getConnectedClientUserNames();
+
     return {
         type: "state-sync",
         state: {
@@ -516,10 +634,14 @@ function buildStatePayload(ws = null) {
             questionIndex: gameState.questionIndex,
             question: sanitizeQuestion(getCurrentQuestion()),
             clientCount: getConnectedClients().length,
+            connectedUsers,
+            userCountTotal: userList.length,
             answeredCount: getAnsweredCount(),
             scores,
             myAnswer: getMyAnswer(ws),
             leaderboard: buildLeaderboardForWs(ws),
+            choiceAnswerCounts: getChoiceAnswerCounts(),
+            slideImageUrl: getSlideImageUrl(),
             isFinalScoreboard: gameState.phase === "scoreboard" && gameState.nextQuestionIndex === 0,
         },
     };
@@ -539,14 +661,15 @@ function goToFirstQuestion() {
     if (allQuestionList.length === 0) {
         gameState.phase = "waiting";
         gameState.questionIndex = 0;
+        gameState.nextQuestionIndex = null;
+        resetSlideState();
         resetAnswers();
         return;
     }
 
-    gameState.phase = "question";
-    gameState.questionIndex = 0;
-    gameState.nextQuestionIndex = null;
-    resetAnswers();
+    const firstType = getQuestionType(allQuestionList[0]);
+    const firstTypeSlide = getSlideKeyForQuestionType(firstType);
+    startSlidePhase(0, ["outline", firstTypeSlide]);
 }
 
 function advanceGameState() {
@@ -554,12 +677,25 @@ function advanceGameState() {
         gameState.phase = "waiting";
         gameState.questionIndex = 0;
         gameState.nextQuestionIndex = null;
+        resetSlideState();
         resetAnswers();
         return;
     }
 
     if (gameState.phase === "waiting") {
         goToFirstQuestion();
+        return;
+    }
+
+    if (gameState.phase === "slide") {
+        if (Array.isArray(gameState.pendingSlideKeys) && gameState.pendingSlideKeys.length > 0) {
+            gameState.currentSlideKey = gameState.pendingSlideKeys.shift();
+            return;
+        }
+
+        gameState.phase = "question";
+        resetSlideState();
+        resetAnswers();
         return;
     }
 
@@ -574,17 +710,22 @@ function advanceGameState() {
             gameState.phase = "waiting";
             gameState.questionIndex = 0;
             gameState.nextQuestionIndex = null;
+            resetSlideState();
             resetAnswers();
             return;
         }
 
         const fallbackNextIndex = (gameState.questionIndex + 1) % allQuestionList.length;
-        gameState.questionIndex = Number.isInteger(gameState.nextQuestionIndex)
+        const targetQuestionIndex = Number.isInteger(gameState.nextQuestionIndex)
             ? gameState.nextQuestionIndex
             : fallbackNextIndex;
-        gameState.nextQuestionIndex = null;
-        gameState.phase = "question";
-        resetAnswers();
+
+        const slideKeys = [];
+        if (shouldShowTypeIntroSlide(targetQuestionIndex)) {
+            slideKeys.push(getSlideKeyForQuestionType(getQuestionType(allQuestionList[targetQuestionIndex])));
+        }
+
+        startSlidePhase(targetQuestionIndex, slideKeys);
         return;
     }
 
@@ -601,6 +742,7 @@ function advanceGameState() {
     gameState.phase = "question";
     gameState.questionIndex = nextIndex;
     gameState.nextQuestionIndex = null;
+    resetSlideState();
     resetAnswers();
 }
 
@@ -682,6 +824,7 @@ wss.on("connection", (ws) => {
             gameState.phase = "waiting";
             gameState.questionIndex = 0;
             gameState.nextQuestionIndex = null;
+            resetSlideState();
             resetAnswers();
             for (const userName of userList) {
                 scores[userName] = 0;
