@@ -1010,7 +1010,12 @@
                 showGeoguessrScreen(question.title, question.imageUrl || "");
                 if (state.phase === "answer") {
                     const point = question.answerPoint || { x: 0, y: 0 };
-                    showGeoguessrAnswerScreen(point.x || 0, point.y || 0, question.answerRadius || 30);
+                    showGeoguessrAnswerScreen(
+                        point.x || 0,
+                        point.y || 0,
+                        question.answerRadius || 30,
+                        state.otherGeoguessrPoints || []
+                    );
                 }
             }
         }
@@ -1120,7 +1125,7 @@
             screenGeoguessrAnswer.hidden = true;
         }
 
-        function drawGeoguessrMapMarker(x, y, r) {
+        function drawGeoguessrMapMarker(x, y, r, otherPoints = []) {
             const mapImage = new Image();
             mapImage.onload = () => {
                 geoguessrMapCanvas.width = mapImage.width;
@@ -1128,12 +1133,23 @@
                 geoguessrMapContext.clearRect(0, 0, geoguessrMapCanvas.width, geoguessrMapCanvas.height);
                 geoguessrMapContext.drawImage(mapImage, 0, 0);
 
-                geoguessrMapContext.fillStyle = "#7a4bb7";
+                otherPoints.forEach((point) => {
+                    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+                        return;
+                    }
+
+                    geoguessrMapContext.fillStyle = "#7a4bb7";
+                    geoguessrMapContext.beginPath();
+                    geoguessrMapContext.arc(point.x, point.y, 12, 0, Math.PI * 2);
+                    geoguessrMapContext.fill();
+                });
+
+                geoguessrMapContext.fillStyle = "#F00";
                 geoguessrMapContext.beginPath();
-                geoguessrMapContext.arc(x, y, Math.max(3, r / 3), 0, Math.PI * 2);
+                geoguessrMapContext.arc(x, y, Math.max(6, r / 3), 0, Math.PI * 2);
                 geoguessrMapContext.fill();
 
-                geoguessrMapContext.strokeStyle = "#7a4bb7";
+                geoguessrMapContext.strokeStyle = "#F00";
                 geoguessrMapContext.lineWidth = 4;
                 geoguessrMapContext.beginPath();
                 geoguessrMapContext.arc(x, y, r, 0, Math.PI * 2);
@@ -1143,10 +1159,10 @@
         }
 
         // x: number, y: number, r: number
-        function showGeoguessrAnswerScreen(x, y, r) {
+        function showGeoguessrAnswerScreen(x, y, r, otherPoints = []) {
             geoguessrAnswerQuestionText.textContent = currentGeoguessrQuestion;
             geoguessrAnswerImage.src = currentGeoguessrImageUrl;
-            drawGeoguessrMapMarker(x, y, r);
+            drawGeoguessrMapMarker(x, y, r, otherPoints);
 
             screenConsole.hidden = true;
             screenSlide.hidden = true;

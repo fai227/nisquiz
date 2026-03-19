@@ -1123,7 +1123,7 @@
             }
         }
 
-        function drawGeoguessrAnswerCanvas(correctPoint, radius, userPoint) {
+        function drawGeoguessrAnswerCanvas(correctPoint, radius, userPoint, otherPoints = []) {
             if (!geoguessrAnswerMapImage) {
                 return;
             }
@@ -1134,26 +1134,31 @@
             ctx.clearRect(0, 0, geoguessrAnswerCanvas.width, geoguessrAnswerCanvas.height);
             ctx.drawImage(geoguessrAnswerMapImage, 0, 0);
 
-            if (userPoint && Number.isFinite(userPoint.x) && Number.isFinite(userPoint.y)) {
+            otherPoints.forEach((point) => {
+                if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+                    return;
+                }
+
                 ctx.fillStyle = "#7a4bb7";
                 ctx.beginPath();
-                ctx.arc(userPoint.x, userPoint.y, 8, 0, Math.PI * 2);
+                ctx.arc(point.x, point.y, 12, 0, Math.PI * 2);
                 ctx.fill();
+            });
 
-                ctx.strokeStyle = "#7a4bb7";
-                ctx.lineWidth = 3;
+            if (userPoint && Number.isFinite(userPoint.x) && Number.isFinite(userPoint.y)) {
+                ctx.fillStyle = "#F00";
                 ctx.beginPath();
                 ctx.arc(userPoint.x, userPoint.y, 16, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.fill();
             }
 
             if (correctPoint && Number.isFinite(correctPoint.x) && Number.isFinite(correctPoint.y)) {
-                ctx.fillStyle = "#24a148";
+                ctx.fillStyle = "#F00";
                 ctx.beginPath();
-                ctx.arc(correctPoint.x, correctPoint.y, Math.max(4, radius / 3), 0, Math.PI * 2);
+                ctx.arc(correctPoint.x, correctPoint.y, Math.max(8, radius / 3), 0, Math.PI * 2);
                 ctx.fill();
 
-                ctx.strokeStyle = "#24a148";
+                ctx.strokeStyle = "#F00";
                 ctx.lineWidth = 4;
                 ctx.beginPath();
                 ctx.arc(correctPoint.x, correctPoint.y, radius, 0, Math.PI * 2);
@@ -1184,11 +1189,11 @@
             showScreen(6);
         }
 
-        function showGeoguessrAnswerScreen(questionNumber, correctPoint, radius, userPoint) {
+        function showGeoguessrAnswerScreen(questionNumber, correctPoint, radius, userPoint, otherPoints = []) {
             geoguessrAnswerQuestionNumberEl.textContent = `${questionNumber}問目`;
 
             const draw = () => {
-                drawGeoguessrAnswerCanvas(correctPoint, radius, userPoint);
+                drawGeoguessrAnswerCanvas(correctPoint, radius, userPoint, otherPoints);
             };
 
             if (geoguessrAnswerMapImage) {
@@ -1335,7 +1340,8 @@
                         question.questionNumber,
                         question.answerPoint || { x: 0, y: 0 },
                         question.answerRadius || 30,
-                        state.myAnswer?.point || geoguessrPin
+                        state.myAnswer?.point || geoguessrPin,
+                        state.otherGeoguessrPoints || []
                     );
                 }
             }

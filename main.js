@@ -598,6 +598,37 @@ function getMyAnswer(ws) {
     return gameState.answersByUser[ws.userName] ?? null;
 }
 
+function getOtherGeoguessrAnswerPoints(ws) {
+    const question = getCurrentQuestion();
+    if (question?.クイズ種別 !== "geoguessr") {
+        return [];
+    }
+
+    const connectedUserNames = new Set(getConnectedClientUserNames());
+    const points = [];
+
+    for (const [userName, answer] of Object.entries(gameState.answersByUser)) {
+        if (!connectedUserNames.has(userName)) {
+            continue;
+        }
+
+        if (ws && ws.role === "client" && ws.userName && userName === ws.userName) {
+            continue;
+        }
+
+        const point = answer?.point;
+        const x = Number(point?.x);
+        const y = Number(point?.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            continue;
+        }
+
+        points.push({ x, y });
+    }
+
+    return points;
+}
+
 function getChoiceAnswerCounts() {
     const question = getCurrentQuestion();
     if (question?.クイズ種別 !== "choice") {
@@ -639,6 +670,7 @@ function buildStatePayload(ws = null) {
             answeredCount: getAnsweredCount(),
             scores,
             myAnswer: getMyAnswer(ws),
+            otherGeoguessrPoints: getOtherGeoguessrAnswerPoints(ws),
             leaderboard: buildLeaderboardForWs(ws),
             choiceAnswerCounts: getChoiceAnswerCounts(),
             slideImageUrl: getSlideImageUrl(),
