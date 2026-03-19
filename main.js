@@ -416,7 +416,7 @@ function calculateGeoguessrScore(question, answer) {
         return 0;
     }
 
-    return Math.round(100 * (1 - (distance / 500)));
+    return Math.round(200 * (1 - (distance / 500)));
 }
 
 function calculateScoreForAnswer(question, answer) {
