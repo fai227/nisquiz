@@ -545,8 +545,13 @@ function getCurrentQuestion() {
 }
 
 function getSortedLeaderboardEntries() {
-    const connectedUserNames = getConnectedClientUserNames();
-    const entries = connectedUserNames.map((userName) => ({
+    const allUserNames = [...new Set(
+        userList
+            .map((userName) => String(userName || "").trim())
+            .filter((userName) => userName.length > 0)
+    )];
+
+    const entries = allUserNames.map((userName) => ({
         userName,
         score: Number(scores[userName]) || 0,
     }));
@@ -583,6 +588,7 @@ function buildLeaderboardForWs(ws = null) {
     }
 
     return {
+        entries,
         top3,
         myRank,
         myScore,

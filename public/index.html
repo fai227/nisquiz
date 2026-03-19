@@ -1267,6 +1267,12 @@
                 currentChoiceStateKey = "";
                 currentSortableStateKey = "";
                 currentGeoguessrStateKey = "";
+
+                if (state?.isFinalScoreboard) {
+                    showWaitingScreen("前方の画面をご確認ください。", false);
+                    return;
+                }
+
                 showScoreboardScreen(state?.leaderboard || null, state?.isFinalScoreboard || false);
                 return;
             }

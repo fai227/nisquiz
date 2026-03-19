@@ -108,6 +108,51 @@
             background: #666;
         }
 
+        .console-audio-panel {
+            width: min(960px, 86vw);
+            display: grid;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .console-audio-row {
+            display: grid;
+            grid-template-columns: 120px minmax(220px, 1fr) 100px;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .console-audio-label {
+            color: #444;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        .console-audio-slider {
+            width: 100%;
+            accent-color: #7a4bb7;
+        }
+
+        .console-audio-button {
+            border: none;
+            border-radius: 8px;
+            min-height: 36px;
+            padding: 0 12px;
+            background: #7a4bb7;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .console-audio-button:hover {
+            background: #6a3da5;
+        }
+
         .console-participant-list {
             position: absolute;
             right: 12px;
@@ -453,18 +498,39 @@
             display: flex;
         }
 
+        .host-reveal-hidden {
+            opacity: 0 !important;
+        }
+
+        .host-reveal-fade {
+            transition: opacity 0.5s ease;
+        }
+
         .scoreboard-top3 {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 16px;
-            margin-top: 20px;
+            min-height: 0;
         }
 
-        #host-top3-list {
-            grid-row: 2 / -1;
-            align-self: stretch;
-            grid-template-rows: 1fr;
-            margin-bottom: 16px;
+        .scoreboard-board {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr);
+            gap: 14px;
+            margin-top: 10px;
+            height: 100%;
+            min-height: 0;
+        }
+
+        .scoreboard-others {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 10px;
+            align-content: start;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 6px;
+            min-height: 0;
         }
 
         .score-card {
@@ -476,6 +542,14 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+        }
+
+        .score-card-hidden {
+            opacity: 0;
+        }
+
+        .score-card-fade {
+            transition: opacity 0.5s ease;
         }
 
         .score-card-rank {
@@ -495,6 +569,41 @@
             font-weight: 700;
             margin-top: 8px;
             color: #444;
+        }
+
+        .score-card-small {
+            border-radius: 10px;
+            background: #f7f2fd;
+            padding: 10px 8px;
+            text-align: center;
+            display: grid;
+            align-content: center;
+            gap: 3px;
+            min-height: 96px;
+        }
+
+        .score-card-small-rank {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #7a4bb7;
+            line-height: 1.1;
+        }
+
+        .score-card-small-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #222;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .score-card-small-points {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #555;
+            line-height: 1.1;
         }
 
         @media (max-width: 640px) {
@@ -524,6 +633,10 @@
             .geoguessr-answer-layout {
                 grid-template-columns: 1fr;
             }
+
+            .scoreboard-others {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
         }
     </style>
 </head>
@@ -536,8 +649,22 @@
                 <img src="../images/logo.svg" alt="ロゴ" class="console-logo" />
                 <div class="console-buttons">
                     <button id="start-button" class="console-start" type="button">ゲーム開始</button>
-                    <button id="reset-button" class="console-reset" type="button">リセット</button>
+                    <button id="reset-button" class="console-reset" type="button">スコアリセット</button>
                 </div>
+                <section class="console-audio-panel" aria-label="音声設定">
+                    <div class="console-audio-row">
+                        <span class="console-audio-label">効果音:</span>
+                        <input id="sfx-volume-slider" class="console-audio-slider" type="range" min="0" max="100"
+                            step="1" value="80" />
+                        <button id="sfx-play-button" class="console-audio-button" type="button">再生</button>
+                    </div>
+                    <div class="console-audio-row">
+                        <span class="console-audio-label">BGM:</span>
+                        <input id="bgm-volume-slider" class="console-audio-slider" type="range" min="0" max="100"
+                            step="1" value="35" />
+                        <button id="bgm-toggle-button" class="console-audio-button" type="button">再生</button>
+                    </div>
+                </section>
                 <aside class="console-participant-list" aria-label="現在の参加者一覧">
                     <p class="console-participant-list-title">現在の参加者: <span
                             id="participant-count-connected">0</span>/<span id="participant-count-total">0</span>人</p>
@@ -601,7 +728,10 @@
                     </div>
                 </header>
 
-                <section class="scoreboard-top3" id="host-top3-list" aria-label="ランキング上位3名"></section>
+                <section class="scoreboard-board" aria-label="順位一覧">
+                    <section class="scoreboard-top3" id="host-top3-list" aria-label="ランキング上位3名"></section>
+                    <section class="scoreboard-others" id="host-other-rank-list" aria-label="4位以降"></section>
+                </section>
             </div>
         </section>
 
@@ -751,6 +881,10 @@
         const screenGeoguessrAnswer = document.getElementById("screen-geoguessr-answer");
         const startButton = document.getElementById("start-button");
         const resetButton = document.getElementById("reset-button");
+        const sfxVolumeSlider = document.getElementById("sfx-volume-slider");
+        const bgmVolumeSlider = document.getElementById("bgm-volume-slider");
+        const sfxPlayButton = document.getElementById("sfx-play-button");
+        const bgmToggleButton = document.getElementById("bgm-toggle-button");
         const nextButtonSlide = document.getElementById("next-button-slide");
         const nextButton = document.getElementById("next-button");
         const nextButtonSortable = document.getElementById("next-button-sortable");
@@ -770,6 +904,7 @@
         const geoguessrQuestionNumberEls = Array.from(screenGeoguessr.querySelectorAll(".quiz-banner-center span"));
         const geoguessrAnswerQuestionNumberEls = Array.from(screenGeoguessrAnswer.querySelectorAll(".quiz-banner-center span"));
         const hostTop3ListEl = document.getElementById("host-top3-list");
+        const hostOtherRankListEl = document.getElementById("host-other-rank-list");
         const answerProgressEls = [
             screenChoice.querySelector(".quiz-banner-right span"),
             screenSortable.querySelector(".quiz-banner-right span"),
@@ -777,6 +912,12 @@
             screenGeoguessr.querySelector(".quiz-banner-right span"),
             screenGeoguessrAnswer.querySelector(".quiz-banner-right span"),
         ];
+        const choiceQuestionAreaEl = screenChoice.querySelector(".question-area");
+        const choiceChoicesGridEl = screenChoice.querySelector(".choices-grid");
+        const sortableQuestionAreaEl = screenSortable.querySelector(".question-area");
+        const sortableChoicesGridEl = screenSortable.querySelector(".choices-grid");
+        const geoguessrQuestionAreaEl = screenGeoguessr.querySelector(".question-area");
+        const geoguessrImageAreaEl = screenGeoguessr.querySelector(".geoguessr-image-area");
 
         const choiceQuestionText = screenChoice.querySelector(".question-area p");
         const choiceItems = Array.from(screenChoice.querySelectorAll(".choice-item"));
@@ -829,6 +970,208 @@
         let currentGeoguessrImageUrl = "";
         const geoguessrMapImageUrl = "/images/map.jpg";
         let hostWs = null;
+        let latestState = null;
+        let hasReceivedFirstStateSync = false;
+        let pendingQuestionAnimation = null;
+        let questionRevealTimerIds = [];
+        let scoreboardRevealTimerIds = [];
+        let lastAnimatedScoreboardKey = null;
+        const AUDIO_SETTINGS_STORAGE_KEY = "nisquiz.host.audioSettings";
+        const hostAudioSettings = {
+            sfxVolume: 80,
+            bgmVolume: 35,
+        };
+        const AUDIO_FILE_START = "/audio/開始.mp3";
+        const AUDIO_FILE_NEXT = "/audio/次へ.mp3";
+        const AUDIO_FILE_CORRECT = "/audio/正解.mp3";
+        const AUDIO_FILE_QUESTION = "/audio/問題.mp3";
+        const AUDIO_FILE_DRUMROLL = "/audio/ドラムロール.mp3";
+        const AUDIO_FILE_CHEER = "/audio/歓声.mp3";
+        const hostBgmAudio = new Audio("/audio/bgm.mp3");
+        hostBgmAudio.loop = true;
+        hostBgmAudio.preload = "auto";
+
+        function clampVolume(value) {
+            const numberValue = Number(value);
+            if (!Number.isFinite(numberValue)) {
+                return 0;
+            }
+
+            return Math.max(0, Math.min(100, Math.round(numberValue)));
+        }
+
+        function applyAudioSettingsToControls() {
+            sfxVolumeSlider.value = String(clampVolume(hostAudioSettings.sfxVolume));
+            bgmVolumeSlider.value = String(clampVolume(hostAudioSettings.bgmVolume));
+        }
+
+        function applyAudioSettingsToPlayers() {
+            hostBgmAudio.volume = clampVolume(hostAudioSettings.bgmVolume) / 100;
+        }
+
+        function syncAudioSettingsFromControls() {
+            hostAudioSettings.sfxVolume = clampVolume(sfxVolumeSlider.value);
+            hostAudioSettings.bgmVolume = clampVolume(bgmVolumeSlider.value);
+            applyAudioSettingsToPlayers();
+        }
+
+        function loadAudioSettingsFromStorage() {
+            try {
+                const stored = window.localStorage.getItem(AUDIO_SETTINGS_STORAGE_KEY);
+                if (!stored) {
+                    return;
+                }
+
+                const parsed = JSON.parse(stored);
+                hostAudioSettings.sfxVolume = clampVolume(parsed?.sfxVolume ?? hostAudioSettings.sfxVolume);
+                hostAudioSettings.bgmVolume = clampVolume(parsed?.bgmVolume ?? hostAudioSettings.bgmVolume);
+            } catch (_error) {
+                // Ignore broken localStorage data and keep defaults.
+            }
+        }
+
+        function saveAudioSettingsToStorage() {
+            syncAudioSettingsFromControls();
+            window.localStorage.setItem(AUDIO_SETTINGS_STORAGE_KEY, JSON.stringify({
+                sfxVolume: hostAudioSettings.sfxVolume,
+                bgmVolume: hostAudioSettings.bgmVolume,
+            }));
+        }
+
+        function playEffectSound(src = AUDIO_FILE_START) {
+            return new Promise((resolve) => {
+                const effectAudio = new Audio(src);
+                effectAudio.volume = clampVolume(hostAudioSettings.sfxVolume) / 100;
+
+                let settled = false;
+                const settle = () => {
+                    if (settled) {
+                        return;
+                    }
+                    settled = true;
+                    resolve();
+                };
+
+                effectAudio.addEventListener("ended", settle, { once: true });
+                effectAudio.addEventListener("error", settle, { once: true });
+                effectAudio.play().catch(() => {
+                    // Ignore play interruption from browser policies.
+                    settle();
+                });
+            });
+        }
+
+        function updateBgmToggleButtonLabel() {
+            bgmToggleButton.textContent = hostBgmAudio.paused ? "再生" : "停止";
+        }
+
+        function playBgm() {
+            hostBgmAudio.volume = clampVolume(hostAudioSettings.bgmVolume) / 100;
+
+            if (!hostBgmAudio.paused) {
+                updateBgmToggleButtonLabel();
+                return Promise.resolve();
+            }
+
+            return hostBgmAudio.play().then(() => {
+                updateBgmToggleButtonLabel();
+            }).catch(() => {
+                // Ignore play interruption from browser policies.
+                updateBgmToggleButtonLabel();
+            });
+        }
+
+        function pauseBgm() {
+            hostBgmAudio.pause();
+            updateBgmToggleButtonLabel();
+        }
+
+        function stopBgm() {
+            hostBgmAudio.pause();
+            hostBgmAudio.currentTime = 0;
+            updateBgmToggleButtonLabel();
+        }
+
+        function toggleBgmPlayback() {
+            if (hostBgmAudio.paused) {
+                void playBgm();
+            } else {
+                pauseBgm();
+            }
+        }
+
+        async function playStartButtonSequence() {
+            syncAudioSettingsFromControls();
+            await playEffectSound(AUDIO_FILE_START);
+            await playBgm();
+        }
+
+        async function playRightTopButtonSequence(nextScreen) {
+            syncAudioSettingsFromControls();
+
+            if (nextScreen?.kind === "answer") {
+                await playEffectSound(AUDIO_FILE_CORRECT);
+                return;
+            }
+
+            if (nextScreen?.kind === "question") {
+                await playEffectSound(AUDIO_FILE_QUESTION);
+                await playBgm();
+                return;
+            }
+
+            if (nextScreen?.kind === "scoreboard" && nextScreen?.isFinalScoreboard) {
+                stopBgm();
+                await playEffectSound(AUDIO_FILE_DRUMROLL);
+                await playEffectSound(AUDIO_FILE_CHEER);
+                return;
+            }
+
+            await playEffectSound(AUDIO_FILE_NEXT);
+            await playBgm();
+        }
+
+        function initializeConsoleAudioControls() {
+            loadAudioSettingsFromStorage();
+            applyAudioSettingsToControls();
+            syncAudioSettingsFromControls();
+            updateBgmToggleButtonLabel();
+
+            sfxVolumeSlider.addEventListener("input", () => {
+                syncAudioSettingsFromControls();
+            });
+
+            bgmVolumeSlider.addEventListener("input", () => {
+                syncAudioSettingsFromControls();
+            });
+
+            sfxPlayButton.addEventListener("click", () => {
+                syncAudioSettingsFromControls();
+                void playEffectSound(AUDIO_FILE_START);
+            });
+
+            bgmToggleButton.addEventListener("click", () => {
+                syncAudioSettingsFromControls();
+                toggleBgmPlayback();
+            });
+
+            hostBgmAudio.addEventListener("play", updateBgmToggleButtonLabel);
+            hostBgmAudio.addEventListener("pause", updateBgmToggleButtonLabel);
+
+            // Expose simple helpers for future timing hooks (question start, etc.).
+            window.hostAudio = {
+                playEffect: playEffectSound,
+                playStartEffect: () => playEffectSound(AUDIO_FILE_START),
+                playBgm,
+                pauseBgm,
+                stopBgm,
+                toggleBgm: toggleBgmPlayback,
+                playStartSequence: playStartButtonSequence,
+                playRightTopSequence: playRightTopButtonSequence,
+                syncSettings: syncAudioSettingsFromControls,
+                saveSettings: saveAudioSettingsToStorage,
+            };
+        }
 
         function showConsoleScreen() {
             screenConsole.hidden = false;
@@ -853,15 +1196,37 @@
             screenGeoguessrAnswer.hidden = true;
         }
 
-        function showScoreboardScreen(top3, isFinal = false) {
+        function clearScoreboardRevealTimers() {
+            scoreboardRevealTimerIds.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            scoreboardRevealTimerIds = [];
+        }
+
+        function showScoreboardScreen(leaderboard, isFinal = false, shouldAnimateReveal = false) {
             scoreboardBannerTitle.textContent = isFinal ? "最終結果" : "現在の順位";
+            const entries = Array.isArray(leaderboard?.entries)
+                ? leaderboard.entries
+                : Array.isArray(leaderboard?.top3)
+                    ? leaderboard.top3
+                    : [];
+            const top3 = entries.slice(0, 3);
+            const others = entries.slice(3);
             const rankLabels = ["1位", "2位", "3位"];
             hostTop3ListEl.innerHTML = "";
+            hostOtherRankListEl.innerHTML = "";
+            clearScoreboardRevealTimers();
+
+            const revealDelayMsByRankIndex = [8000, 5000, 2000];
 
             for (let i = 0; i < 3; i += 1) {
                 const row = top3[i];
                 const card = document.createElement("article");
                 card.className = "score-card";
+
+                if (shouldAnimateReveal) {
+                    card.classList.add("score-card-hidden");
+                }
 
                 const rank = document.createElement("div");
                 rank.className = "score-card-rank";
@@ -879,6 +1244,48 @@
                 card.appendChild(name);
                 card.appendChild(score);
                 hostTop3ListEl.appendChild(card);
+
+                if (shouldAnimateReveal) {
+                    const delay = revealDelayMsByRankIndex[i] || 0;
+                    scoreboardRevealTimerIds.push(setTimeout(() => {
+                        card.classList.add("score-card-fade");
+                        card.classList.remove("score-card-hidden");
+                    }, delay));
+                }
+            }
+
+            others.forEach((row, index) => {
+                const card = document.createElement("article");
+                card.className = "score-card-small";
+                if (shouldAnimateReveal) {
+                    card.classList.add("score-card-hidden");
+                }
+
+                const rank = document.createElement("div");
+                rank.className = "score-card-small-rank";
+                rank.textContent = `${index + 4}位`;
+
+                const name = document.createElement("div");
+                name.className = "score-card-small-name";
+                name.textContent = row?.userName || "---";
+
+                const score = document.createElement("div");
+                score.className = "score-card-small-points";
+                score.textContent = `${row?.score ?? 0}点`;
+
+                card.appendChild(rank);
+                card.appendChild(name);
+                card.appendChild(score);
+                hostOtherRankListEl.appendChild(card);
+            });
+
+            if (shouldAnimateReveal) {
+                scoreboardRevealTimerIds.push(setTimeout(() => {
+                    hostOtherRankListEl.querySelectorAll(".score-card-small").forEach((card) => {
+                        card.classList.add("score-card-fade");
+                        card.classList.remove("score-card-hidden");
+                    });
+                }, 10000));
             }
 
             screenConsole.hidden = true;
@@ -890,9 +1297,25 @@
             screenGeoguessrAnswer.hidden = true;
         }
 
-        function sendHostNext() {
+        function sendHostNext(options = {}) {
+            const playNavigationAudio = options.playNavigationAudio !== false;
+
             if (!hostWs || hostWs.readyState !== WebSocket.OPEN) {
                 return;
+            }
+
+            const nextScreen = latestState?.nextScreen;
+            if (playNavigationAudio) {
+                void playRightTopButtonSequence(nextScreen);
+            }
+
+            if (nextScreen?.kind === "question") {
+                pendingQuestionAnimation = {
+                    questionType: String(nextScreen?.questionType || ""),
+                    questionNumber: Number(nextScreen?.questionNumber),
+                };
+            } else {
+                pendingQuestionAnimation = null;
             }
 
             hostWs.send(JSON.stringify({
@@ -983,6 +1406,108 @@
             });
         }
 
+        function getQuestionRevealTargets(questionType) {
+            if (questionType === "choice") {
+                return [choiceQuestionAreaEl, choiceChoicesGridEl];
+            }
+
+            if (questionType === "sortable") {
+                return [sortableQuestionAreaEl, sortableChoicesGridEl];
+            }
+
+            if (questionType === "geoguessr") {
+                return [geoguessrQuestionAreaEl, geoguessrImageAreaEl];
+            }
+
+            return [];
+        }
+
+        function clearQuestionRevealTimers() {
+            questionRevealTimerIds.forEach((timerId) => {
+                clearTimeout(timerId);
+            });
+            questionRevealTimerIds = [];
+        }
+
+        function makeRevealHiddenInstant(element) {
+            if (!element) {
+                return;
+            }
+
+            element.classList.remove("host-reveal-fade");
+            // Force style flush so re-adding fade class always animates.
+            void element.offsetWidth;
+            element.classList.add("host-reveal-hidden");
+        }
+
+        function makeRevealVisible(element) {
+            if (!element) {
+                return;
+            }
+
+            element.classList.remove("host-reveal-hidden", "host-reveal-fade");
+        }
+
+        function revealWithFade(element) {
+            if (!element) {
+                return;
+            }
+
+            element.classList.add("host-reveal-fade");
+            element.classList.remove("host-reveal-hidden");
+        }
+
+        function resetAllQuestionRevealVisibility() {
+            ["choice", "sortable", "geoguessr"].forEach((questionType) => {
+                getQuestionRevealTargets(questionType).forEach((element) => {
+                    makeRevealVisible(element);
+                });
+            });
+        }
+
+        function shouldAnimateQuestionReveal(state, question, isFirstStateSync) {
+            if (isFirstStateSync || !state || state.phase !== "question" || !question) {
+                return false;
+            }
+
+            if (!pendingQuestionAnimation) {
+                return false;
+            }
+
+            const expectedType = String(pendingQuestionAnimation.questionType || "");
+            const expectedNumber = Number(pendingQuestionAnimation.questionNumber);
+            const actualNumber = Number(question.questionNumber);
+
+            if (expectedType && expectedType !== question.type) {
+                return false;
+            }
+
+            if (Number.isInteger(expectedNumber) && Number.isInteger(actualNumber) && expectedNumber !== actualNumber) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function startQuestionRevealAnimation(questionType) {
+            const targets = getQuestionRevealTargets(questionType);
+            if (targets.length === 0) {
+                return;
+            }
+
+            clearQuestionRevealTimers();
+            targets.forEach((element) => makeRevealHiddenInstant(element));
+
+            const [questionBlock, choiceBlock] = targets;
+            questionRevealTimerIds.push(setTimeout(() => {
+                revealWithFade(questionBlock);
+            }, 1000));
+
+            questionRevealTimerIds.push(setTimeout(() => {
+                revealWithFade(choiceBlock);
+            }, 3000));
+        }
+
         function getDifficultyStars(value) {
             const level = Math.max(1, Math.min(5, Number(value) || 1));
             return `${"★".repeat(level)}${"☆".repeat(5 - level)}`;
@@ -1012,31 +1537,69 @@
         }
 
         function renderState(state) {
+            const isFirstStateSync = !hasReceivedFirstStateSync;
+            hasReceivedFirstStateSync = true;
+            latestState = state || null;
+
             updateAnswerProgress(state?.answeredCount ?? 0, state?.clientCount ?? 0);
             updateParticipantList(state);
             updateNextButtonLabels(state);
 
             if (!state || state.phase === "waiting" || !state.question) {
+                pendingQuestionAnimation = null;
+                lastAnimatedScoreboardKey = null;
+                clearScoreboardRevealTimers();
+                clearQuestionRevealTimers();
+                resetAllQuestionRevealVisibility();
                 showConsoleScreen();
                 return;
             }
 
             if (state.phase === "scoreboard") {
-                showScoreboardScreen(state?.leaderboard?.top3 || [], state?.isFinalScoreboard || false);
+                pendingQuestionAnimation = null;
+                clearQuestionRevealTimers();
+                resetAllQuestionRevealVisibility();
+
+                const scoreboardKey = `${Number(state?.questionIndex) || 0}:${state?.isFinalScoreboard ? "final" : "normal"}`;
+                const shouldAnimateReveal = scoreboardKey !== lastAnimatedScoreboardKey;
+                showScoreboardScreen(
+                    state?.leaderboard || null,
+                    state?.isFinalScoreboard || false,
+                    shouldAnimateReveal
+                );
+
+                if (shouldAnimateReveal) {
+                    lastAnimatedScoreboardKey = scoreboardKey;
+                }
                 return;
             }
 
             if (state.phase === "slide") {
+                pendingQuestionAnimation = null;
+                lastAnimatedScoreboardKey = null;
+                clearScoreboardRevealTimers();
+                clearQuestionRevealTimers();
+                resetAllQuestionRevealVisibility();
                 showSlideScreen(state?.slideImageUrl || "");
                 return;
             }
+
+            lastAnimatedScoreboardKey = null;
 
             const question = state.question;
             updateQuestionMeta(question);
             if (question.type === "choice") {
                 setQuestionNumber(choiceQuestionNumberEls, question.questionNumber);
                 showQuestionScreen(question.title, question.options || []);
+                if (state.phase === "question" && shouldAnimateQuestionReveal(state, question, isFirstStateSync)) {
+                    startQuestionRevealAnimation(question.type);
+                    pendingQuestionAnimation = null;
+                } else {
+                    clearQuestionRevealTimers();
+                    resetAllQuestionRevealVisibility();
+                }
                 if (state.phase === "answer") {
+                    pendingQuestionAnimation = null;
                     showAnswerScreen(question.correctIndex, state.choiceAnswerCounts || []);
                 }
                 return;
@@ -1047,7 +1610,17 @@
                 setQuestionNumber(sortableAnswerQuestionNumberEls, question.questionNumber);
                 if (state.phase === "question") {
                     showSortableQuestionScreen(question.title, question.options || []);
+                    if (shouldAnimateQuestionReveal(state, question, isFirstStateSync)) {
+                        startQuestionRevealAnimation(question.type);
+                        pendingQuestionAnimation = null;
+                    } else {
+                        clearQuestionRevealTimers();
+                        resetAllQuestionRevealVisibility();
+                    }
                 } else {
+                    pendingQuestionAnimation = null;
+                    clearQuestionRevealTimers();
+                    resetAllQuestionRevealVisibility();
                     showSortableQuestionScreen(question.title, question.options || []);
                     showSortableAnswerScreen(question.correctOrder || []);
                 }
@@ -1058,7 +1631,19 @@
                 setQuestionNumber(geoguessrQuestionNumberEls, question.questionNumber);
                 setQuestionNumber(geoguessrAnswerQuestionNumberEls, question.questionNumber);
                 showGeoguessrScreen(question.title, question.imageUrl || "");
+                if (state.phase === "question") {
+                    if (shouldAnimateQuestionReveal(state, question, isFirstStateSync)) {
+                        startQuestionRevealAnimation(question.type);
+                        pendingQuestionAnimation = null;
+                    } else {
+                        clearQuestionRevealTimers();
+                        resetAllQuestionRevealVisibility();
+                    }
+                }
                 if (state.phase === "answer") {
+                    pendingQuestionAnimation = null;
+                    clearQuestionRevealTimers();
+                    resetAllQuestionRevealVisibility();
                     const point = question.answerPoint || { x: 0, y: 0 };
                     showGeoguessrAnswerScreen(
                         point.x || 0,
@@ -1246,7 +1831,9 @@
         }
 
         startButton.addEventListener("click", () => {
-            sendHostNext();
+            saveAudioSettingsToStorage();
+            sendHostNext({ playNavigationAudio: false });
+            void playStartButtonSequence();
         });
 
         resetButton.addEventListener("click", () => {
@@ -1290,6 +1877,7 @@
             sendHostNext();
         });
 
+        initializeConsoleAudioControls();
         connectHostWs();
     </script>
 </body>
