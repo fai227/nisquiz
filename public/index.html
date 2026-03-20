@@ -470,6 +470,39 @@
             font-weight: 600;
             color: #555;
         }
+
+        .answer-earned-points {
+            margin: 8px 0 0;
+            font-size: clamp(1.8rem, 6vw, 2.6rem);
+            font-weight: 900;
+            color: var(--color-purple);
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .answer-earned-points.show {
+            animation: answer-earned-fade-in 1s ease-out forwards;
+        }
+
+        @keyframes answer-earned-fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .answer-earned-role {
+            display: block;
+            margin: 4px 0 0;
+            font-size: clamp(0.8rem, 2.5vw, 1rem);
+            font-weight: 600;
+            color: #888;
+        }
     </style>
 </head>
 
@@ -569,6 +602,7 @@
                         </div>
 
                         <div id="choice-answer-options" class="choice-answer-options"></div>
+                        <p id="choice-earned-points" class="answer-earned-points" hidden>+0点</p>
                     </div>
                 </div>
             </div>
@@ -614,6 +648,7 @@
                         </div>
 
                         <div id="sortable-answer-options" class="choice-answer-options"></div>
+                        <p id="sortable-earned-points" class="answer-earned-points" hidden>+0点</p>
                     </div>
                 </div>
             </div>
@@ -659,6 +694,7 @@
                     </div>
                     <canvas id="geoguessr-answer-canvas"
                         style="max-width:100%;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.15);"></canvas>
+                    <p id="geoguessr-earned-points" class="answer-earned-points" hidden>+0点</p>
                 </div>
             </div>
         </section>
@@ -692,6 +728,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.6/Sortable.min.js"
         integrity="sha512-csIng5zcB+XpulRUa+ev1zKo7zRNGpEaVfNB9On1no9KYTEY/rLGAEEpvgdw6nim1WdTuihZY1eqZ31K7/fZjw=="
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/countup.js@2.10.0/dist/countUp.umd.min.js"></script>
     <script>
         "use strict";
 
@@ -720,16 +757,19 @@
         const choiceSubmitButton = document.querySelector("#screen-choice .choice-submit-button");
         const choiceAnswerQuestionNumberEl = document.getElementById("choice-answer-question-number");
         const choiceAnswerOptionsEl = document.getElementById("choice-answer-options");
+        const choiceEarnedPointsEl = document.getElementById("choice-earned-points");
         const sortableQuestionNumberEl = document.getElementById("sortable-question-number");
         const sortableListEl = document.getElementById("sortable-list");
         const sortableSubmitButton = document.getElementById("sortable-submit-button");
         const sortableAnswerQuestionNumberEl = document.getElementById("sortable-answer-question-number");
         const sortableAnswerOptionsEl = document.getElementById("sortable-answer-options");
+        const sortableEarnedPointsEl = document.getElementById("sortable-earned-points");
         const geoguessrQuestionNumberEl = document.getElementById("geoguessr-question-number");
         const geoguessrCanvas = document.getElementById("geoguessr-canvas");
         const geoguessrSubmitButton = document.getElementById("geoguessr-submit-button");
         const geoguessrAnswerQuestionNumberEl = document.getElementById("geoguessr-answer-question-number");
         const geoguessrAnswerCanvas = document.getElementById("geoguessr-answer-canvas");
+        const geoguessrEarnedPointsEl = document.getElementById("geoguessr-earned-points");
         const scoreboardRankEl = document.getElementById("scoreboard-rank");
         const scoreboardPointsEl = document.getElementById("scoreboard-points");
         const scoreboardNearPrizeEl = document.getElementById("scoreboard-near-prize");
@@ -757,9 +797,12 @@
         let geoguessrDragging = false;
         let geoguessrDragPos = null;
         let clientWs = null;
+        let hasReceivedFirstStateSync = false;
+        let lastShownAnswerDeltaKey = "";
         let choiceSubmitted = false;
         let sortableSubmitted = false;
         let geoguessrSubmitted = false;
+        const bannerScoreAnimations = new WeakMap();
 
         function showScreen(index) {
             screens.forEach((screen, i) => {
@@ -773,8 +816,36 @@
             bannerPlayerNameEls.forEach((el) => {
                 el.textContent = playerLabel;
             });
+
+            const scoreValue = Number(currentScore) || 0;
+            const CountUpClass = window.countUp?.CountUp;
             bannerScoreEls.forEach((el) => {
-                el.textContent = `スコア: ${currentScore}点`;
+                if (!CountUpClass) {
+                    el.textContent = `スコア: ${scoreValue}点`;
+                    return;
+                }
+
+                let animation = bannerScoreAnimations.get(el);
+                if (!animation) {
+                    animation = new CountUpClass(el, scoreValue, {
+                        startVal: scoreValue,
+                        duration: 2,
+                        useGrouping: false,
+                        decimalPlaces: 0,
+                        prefix: "スコア: ",
+                        suffix: "点",
+                    });
+                    bannerScoreAnimations.set(el, animation);
+                    if (!animation.error) {
+                        animation.start();
+                    } else {
+                        el.textContent = `スコア: ${scoreValue}点`;
+                    }
+                    return;
+                }
+
+                animation.options.duration = 2;
+                animation.update(scoreValue);
             });
         }
 
@@ -790,6 +861,71 @@
 
             clientWs.send(JSON.stringify(payload));
             return true;
+        }
+
+        function formatEarnedPointsText(points) {
+            const value = Number(points) || 0;
+            return `${value >= 0 ? "+" : ""}${value}点`;
+        }
+
+        function resetRoundEarnedPointsDisplay() {
+            [choiceEarnedPointsEl, sortableEarnedPointsEl, geoguessrEarnedPointsEl].forEach((el) => {
+                if (!el) {
+                    return;
+                }
+                el.hidden = true;
+                el.classList.remove("show");
+                const roleEl = el.querySelector(".answer-earned-role");
+                if (roleEl) {
+                    roleEl.remove();
+                }
+            });
+        }
+
+        function getSortableRoleName(points) {
+            const value = Number(points) || 0;
+            if (value === 250) {
+                return "- ヨンレンタン -";
+            }
+            if (value === 125) {
+                return "- ニレンタン -";
+            }
+            if (value === 50) {
+                return "- サンレンプク / タン -";
+            }
+            return "";
+        }
+
+        function showRoundEarnedPoints(el, points, options = {}) {
+            if (!el || !Number.isFinite(Number(points))) {
+                return;
+            }
+
+            const value = Number(points);
+            const hideZero = options.hideZero ?? false;
+            const showRole = options.showRole ?? false;
+
+            if (hideZero && value === 0) {
+                el.hidden = true;
+                return;
+            }
+
+            el.textContent = formatEarnedPointsText(value);
+
+            if (showRole) {
+                const roleName = getSortableRoleName(value);
+                if (roleName) {
+                    const roleEl = document.createElement("span");
+                    roleEl.className = "answer-earned-role";
+                    roleEl.textContent = roleName;
+                    el.appendChild(roleEl);
+                }
+            }
+
+            el.hidden = false;
+            el.classList.remove("show");
+            void el.offsetWidth;
+            el.classList.add("show");
         }
 
         function setChoiceSubmissionLocked(locked) {
@@ -821,6 +957,7 @@
         function showSortableScreen(questionNumber, options) {
             currentSortableQuestionNumber = Number(questionNumber) || 1;
             currentSortableOptions = [...options];
+            resetRoundEarnedPointsDisplay();
             lastSubmittedSortableOrder = [];
             sortableQuestionNumberEl.textContent = `${currentSortableQuestionNumber}問目`;
             sortableListEl.innerHTML = "";
@@ -854,7 +991,7 @@
         }
 
         // correctOrder: number[] (1-based)
-        function showSortableAnswerScreen(correctOrder) {
+        function showSortableAnswerScreen(correctOrder, earnedPoints = null) {
             const submittedOrder = lastSubmittedSortableOrder.length > 0
                 ? [...lastSubmittedSortableOrder]
                 : Array.from(sortableListEl.children).map((item) => Number(item.dataset.optionIndex));
@@ -886,6 +1023,7 @@
                 sortableAnswerOptionsEl.appendChild(item);
             });
 
+            showRoundEarnedPoints(sortableEarnedPointsEl, earnedPoints, { hideZero: true, showRole: true });
             showScreen(5);
         }
 
@@ -893,6 +1031,7 @@
         function showChoiceScreen(questionNumber, options) {
             currentChoiceQuestionNumber = Number(questionNumber) || 1;
             currentChoiceOptions = [...options];
+            resetRoundEarnedPointsDisplay();
             lastSubmittedChoiceIndex = null;
             setChoiceSubmissionLocked(false);
 
@@ -911,7 +1050,7 @@
         }
 
         // correctIndex: number (1-based)
-        function showChoiceAnswerScreen(correctIndex, choiceAnswerCounts = []) {
+        function showChoiceAnswerScreen(correctIndex, choiceAnswerCounts = [], earnedPoints = null) {
             const checkedInput = choiceOptionInputs.find((input) => input.checked);
             const selectedIndex = lastSubmittedChoiceIndex ?? (checkedInput ? Number(checkedInput.value) : null);
 
@@ -951,6 +1090,7 @@
                 choiceAnswerOptionsEl.appendChild(item);
             });
 
+            showRoundEarnedPoints(choiceEarnedPointsEl, earnedPoints, { hideZero: true });
             showScreen(3);
         }
 
@@ -1168,6 +1308,7 @@
 
         function showGeoguessrScreen() {
             geoguessrQuestionNumberEl.textContent = "1問目";
+            resetRoundEarnedPointsDisplay();
             geoguessrPin = null;
             geoguessrDragging = false;
             geoguessrDragPos = null;
@@ -1189,12 +1330,14 @@
             showScreen(6);
         }
 
-        function showGeoguessrAnswerScreen(questionNumber, correctPoint, radius, userPoint, otherPoints = []) {
+        function showGeoguessrAnswerScreen(questionNumber, correctPoint, radius, userPoint, otherPoints = [], earnedPoints = null) {
             geoguessrAnswerQuestionNumberEl.textContent = `${questionNumber}問目`;
 
             const draw = () => {
                 drawGeoguessrAnswerCanvas(correctPoint, radius, userPoint, otherPoints);
             };
+
+            showRoundEarnedPoints(geoguessrEarnedPointsEl, earnedPoints, { hideZero: false });
 
             if (geoguessrAnswerMapImage) {
                 draw();
@@ -1258,8 +1401,13 @@
         }
 
         function renderState(state) {
+            let scoreDelta = null;
+            const isFirstStateSync = !hasReceivedFirstStateSync;
+            hasReceivedFirstStateSync = true;
             if (state?.scores && currentPlayerId) {
-                currentScore = Number(state.scores[currentPlayerId]) || 0;
+                const nextScore = Number(state.scores[currentPlayerId]) || 0;
+                scoreDelta = isFirstStateSync ? null : (nextScore - currentScore);
+                currentScore = nextScore;
                 updateBanner();
             }
 
@@ -1267,6 +1415,8 @@
                 currentChoiceStateKey = "";
                 currentSortableStateKey = "";
                 currentGeoguessrStateKey = "";
+                lastShownAnswerDeltaKey = "";
+                resetRoundEarnedPointsDisplay();
 
                 if (state?.isFinalScoreboard) {
                     showWaitingScreen("前方の画面をご確認ください。", false);
@@ -1281,6 +1431,8 @@
                 currentChoiceStateKey = "";
                 currentSortableStateKey = "";
                 currentGeoguessrStateKey = "";
+                lastShownAnswerDeltaKey = "";
+                resetRoundEarnedPointsDisplay();
                 showWaitingScreen("前方の画面をご確認ください。", false);
                 return;
             }
@@ -1289,6 +1441,8 @@
                 currentChoiceStateKey = "";
                 currentSortableStateKey = "";
                 currentGeoguessrStateKey = "";
+                lastShownAnswerDeltaKey = "";
+                resetRoundEarnedPointsDisplay();
                 showWaitingScreen("開始までお待ちください", true);
                 return;
             }
@@ -1306,7 +1460,10 @@
                 currentChoiceStateKey = nextStateKey;
 
                 if (state.phase === "answer") {
-                    showChoiceAnswerScreen(question.correctIndex, state.choiceAnswerCounts || []);
+                    const answerDeltaKey = `${nextStateKey}:answer`;
+                    const earnedPoints = lastShownAnswerDeltaKey === answerDeltaKey ? null : scoreDelta;
+                    showChoiceAnswerScreen(question.correctIndex, state.choiceAnswerCounts || [], earnedPoints);
+                    lastShownAnswerDeltaKey = answerDeltaKey;
                 }
                 return;
             }
@@ -1323,8 +1480,11 @@
                 currentSortableStateKey = nextStateKey;
 
                 if (state.phase === "answer") {
-                    showSortableAnswerScreen(question.correctOrder || []);
+                    const answerDeltaKey = `${nextStateKey}:answer`;
+                    const earnedPoints = lastShownAnswerDeltaKey === answerDeltaKey ? null : scoreDelta;
+                    showSortableAnswerScreen(question.correctOrder || [], earnedPoints);
                     sortableAnswerQuestionNumberEl.textContent = `${question.questionNumber}問目`;
+                    lastShownAnswerDeltaKey = answerDeltaKey;
                 }
                 return;
             }
@@ -1342,13 +1502,17 @@
                 currentGeoguessrStateKey = nextStateKey;
 
                 if (state.phase === "answer") {
+                    const answerDeltaKey = `${nextStateKey}:answer`;
+                    const earnedPoints = lastShownAnswerDeltaKey === answerDeltaKey ? null : scoreDelta;
                     showGeoguessrAnswerScreen(
                         question.questionNumber,
                         question.answerPoint || { x: 0, y: 0 },
                         question.answerRadius || 30,
                         state.myAnswer?.point || geoguessrPin,
-                        state.otherGeoguessrPoints || []
+                        state.otherGeoguessrPoints || [],
+                        earnedPoints
                     );
+                    lastShownAnswerDeltaKey = answerDeltaKey;
                 }
             }
         }

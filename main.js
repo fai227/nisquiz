@@ -396,15 +396,43 @@ function calculateChoiceScore(question, answer) {
 function calculateSortableScore(question, answer) {
     const correctOrder = Array.isArray(question?.正解) ? question.正解 : [];
     const submittedOrder = Array.isArray(answer?.order) ? answer.order : [];
-    let correctCount = 0;
-
-    for (let i = 0; i < correctOrder.length; i += 1) {
-        if (Number(submittedOrder[i]) === Number(correctOrder[i])) {
-            correctCount += 1;
-        }
+    if (correctOrder.length === 0 || submittedOrder.length === 0) {
+        return 0;
     }
 
-    return correctCount * 100;
+    const firstCorrect = Number(submittedOrder[0]) === Number(correctOrder[0]);
+    const secondCorrect = Number(submittedOrder[1]) === Number(correctOrder[1]);
+
+    const allCorrect =
+        submittedOrder.length >= correctOrder.length
+        && correctOrder.every((value, index) => Number(submittedOrder[index]) === Number(value));
+
+    // サンレンプク: 1位〜3位の正解要素を順不同で含む（=4位も自動的に正解）
+    const top3Correct = correctOrder.slice(0, 3).map((value) => Number(value));
+    const top3Submitted = submittedOrder.slice(0, 3).map((value) => Number(value));
+    const top3Set = new Set(top3Correct);
+    const sanrenpuku =
+        top3Correct.length === 3
+        && top3Submitted.length === 3
+        && new Set(top3Submitted).size === 3
+        && top3Submitted.every((value) => top3Set.has(value));
+
+    if (allCorrect) {
+        // ヨンレンタン
+        return 250;
+    }
+
+    if (firstCorrect && secondCorrect) {
+        // ニレンタン
+        return 125;
+    }
+
+    if (sanrenpuku || firstCorrect) {
+        // サンレンプク or タン
+        return 50;
+    }
+
+    return 0;
 }
 
 function calculateGeoguessrScore(question, answer) {
@@ -415,11 +443,11 @@ function calculateGeoguessrScore(question, answer) {
     }
 
     const distance = calculateGeoguessrDistance(answerPoint, correctPoint);
-    if (!Number.isFinite(distance) || distance >= 500) {
+    if (!Number.isFinite(distance) || distance >= 300) {
         return 0;
     }
 
-    return Math.round(200 * (1 - (distance / 500)));
+    return Math.round(200 * (1 - (distance / 300)));
 }
 
 function calculateScoreForAnswer(question, answer) {

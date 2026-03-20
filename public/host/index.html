@@ -202,6 +202,35 @@
             display: block;
         }
 
+        .host-settings-button {
+            position: absolute;
+            right: 176px;
+            top: 8px;
+            width: 44px;
+            height: 44px;
+            min-height: 44px;
+            border: none;
+            border-radius: 6px;
+            background: #888;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            padding: 0;
+        }
+
+        .host-settings-button:hover {
+            background: #666;
+        }
+
+        .host-settings-button svg {
+            width: 24px;
+            height: 24px;
+            fill: currentColor;
+        }
+
         .slide-next-button {
             position: absolute;
             right: 12px;
@@ -219,6 +248,119 @@
         }
 
         .slide-next-button:hover {
+            background: #6a3da5;
+        }
+
+        .settings-popup {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .settings-popup.show {
+            display: flex;
+        }
+
+        .settings-popup-content {
+            background: #fff;
+            border-radius: 12px;
+            padding: 32px;
+            width: max-content;
+            max-width: calc(100vw - 24px);
+            max-height: calc(100vh - 24px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            overflow: auto;
+        }
+
+        .settings-popup-text {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            text-align: center;
+        }
+
+        .settings-popup-close {
+            background: #7a4bb7;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 32px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .settings-popup-close:hover {
+            background: #6a3da5;
+        }
+
+        .settings-popup-reset {
+            background: #888;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 32px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .settings-popup-reset:hover {
+            background: #666;
+        }
+
+        .settings-audio-panel {
+            width: min(960px, 86vw);
+            display: grid;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .settings-audio-row {
+            display: grid;
+            grid-template-columns: 120px minmax(220px, 1fr) 100px;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-audio-label {
+            color: #444;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        .settings-audio-slider {
+            width: 100%;
+            accent-color: #7a4bb7;
+        }
+
+        .settings-audio-button {
+            border: none;
+            border-radius: 8px;
+            min-height: 36px;
+            padding: 0 12px;
+            background: #7a4bb7;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .settings-audio-button:hover {
             background: #6a3da5;
         }
 
@@ -607,6 +749,23 @@
         }
 
         @media (max-width: 640px) {
+            .settings-popup-content {
+                width: calc(100vw - 24px);
+                padding: 16px;
+            }
+
+            .settings-audio-panel {
+                width: 100%;
+            }
+
+            .settings-audio-row {
+                grid-template-columns: 1fr;
+            }
+
+            .settings-audio-label {
+                text-align: left;
+            }
+
             .quiz-banner {
                 grid-template-columns: 1fr;
                 justify-items: start;
@@ -675,10 +834,38 @@
 
         <section id="screen-slide" class="screen" hidden>
             <div class="slide-layout">
+                <button class="host-settings-button" type="button" aria-label="設定">
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 640 640"><!--!Font Awesome Free v7.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2026 Fonticons, Inc.-->
+                        <path
+                            d="M259.1 73.5C262.1 58.7 275.2 48 290.4 48L350.2 48C365.4 48 378.5 58.7 381.5 73.5L396 143.5C410.1 149.5 423.3 157.2 435.3 166.3L503.1 143.8C517.5 139 533.3 145 540.9 158.2L570.8 210C578.4 223.2 575.7 239.8 564.3 249.9L511 297.3C511.9 304.7 512.3 312.3 512.3 320C512.3 327.7 511.8 335.3 511 342.7L564.4 390.2C575.8 400.3 578.4 417 570.9 430.1L541 481.9C533.4 495 517.6 501.1 503.2 496.3L435.4 473.8C423.3 482.9 410.1 490.5 396.1 496.6L381.7 566.5C378.6 581.4 365.5 592 350.4 592L290.6 592C275.4 592 262.3 581.3 259.3 566.5L244.9 496.6C230.8 490.6 217.7 482.9 205.6 473.8L137.5 496.3C123.1 501.1 107.3 495.1 99.7 481.9L69.8 430.1C62.2 416.9 64.9 400.3 76.3 390.2L129.7 342.7C128.8 335.3 128.4 327.7 128.4 320C128.4 312.3 128.9 304.7 129.7 297.3L76.3 249.8C64.9 239.7 62.3 223 69.8 209.9L99.7 158.1C107.3 144.9 123.1 138.9 137.5 143.7L205.3 166.2C217.4 157.1 230.6 149.5 244.6 143.4L259.1 73.5zM320.3 400C364.5 399.8 400.2 363.9 400 319.7C399.8 275.5 363.9 239.8 319.7 240C275.5 240.2 239.8 276.1 240 320.3C240.2 364.5 276.1 400.2 320.3 400z" />
+                    </svg>
+                </button>
                 <button id="next-button-slide" class="slide-next-button" type="button">次へ</button>
                 <img id="slide-image" class="slide-image" src="" alt="説明スライド" />
             </div>
         </section>
+
+        <div id="settings-popup" class="settings-popup">
+            <div class="settings-popup-content">
+                <section class="settings-audio-panel" aria-label="音声設定">
+                    <div class="settings-audio-row">
+                        <span class="settings-audio-label">効果音:</span>
+                        <input id="popup-sfx-volume-slider" class="settings-audio-slider" type="range" min="0" max="100"
+                            step="1" value="80" />
+                        <button id="popup-sfx-play-button" class="settings-audio-button" type="button">再生</button>
+                    </div>
+                    <div class="settings-audio-row">
+                        <span class="settings-audio-label">BGM:</span>
+                        <input id="popup-bgm-volume-slider" class="settings-audio-slider" type="range" min="0" max="100"
+                            step="1" value="35" />
+                        <button id="popup-bgm-toggle-button" class="settings-audio-button" type="button">再生</button>
+                    </div>
+                </section>
+                <button id="settings-popup-reset" class="settings-popup-reset" type="button">リセット</button>
+                <button id="settings-popup-close" class="settings-popup-close" type="button">閉じる</button>
+            </div>
+        </div>
 
         <section id="screen-choice" class="screen" hidden>
             <div class="quiz-layout">
@@ -694,6 +881,12 @@
                         <span>解答完了: n/N人</span>
                         <button id="next-button" type="button">次へ</button>
                     </div>
+                    <button class="host-settings-button" type="button" aria-label="設定">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                            <path
+                                d="M259.1 73.5C262.1 58.7 275.2 48 290.4 48L350.2 48C365.4 48 378.5 58.7 381.5 73.5L396 143.5C410.1 149.5 423.3 157.2 435.3 166.3L503.1 143.8C517.5 139 533.3 145 540.9 158.2L570.8 210C578.4 223.2 575.7 239.8 564.3 249.9L511 297.3C511.9 304.7 512.3 312.3 512.3 320C512.3 327.7 511.8 335.3 511 342.7L564.4 390.2C575.8 400.3 578.4 417 570.9 430.1L541 481.9C533.4 495 517.6 501.1 503.2 496.3L435.4 473.8C423.3 482.9 410.1 490.5 396.1 496.6L381.7 566.5C378.6 581.4 365.5 592 350.4 592L290.6 592C275.4 592 262.3 581.3 259.3 566.5L244.9 496.6C230.8 490.6 217.7 482.9 205.6 473.8L137.5 496.3C123.1 501.1 107.3 495.1 99.7 481.9L69.8 430.1C62.2 416.9 64.9 400.3 76.3 390.2L129.7 342.7C128.8 335.3 128.4 327.7 128.4 320C128.4 312.3 128.9 304.7 129.7 297.3L76.3 249.8C64.9 239.7 62.3 223 69.8 209.9L99.7 158.1C107.3 144.9 123.1 138.9 137.5 143.7L205.3 166.2C217.4 157.1 230.6 149.5 244.6 143.4L259.1 73.5zM320.3 400C364.5 399.8 400.2 363.9 400 319.7C399.8 275.5 363.9 239.8 319.7 240C275.5 240.2 239.8 276.1 240 320.3C240.2 364.5 276.1 400.2 320.3 400z" />
+                        </svg>
+                    </button>
                 </header>
 
                 <section class="question-area">
@@ -726,6 +919,12 @@
                     <div class="quiz-banner-right">
                         <button id="next-button-scoreboard" type="button">次へ</button>
                     </div>
+                    <button class="host-settings-button" type="button" aria-label="設定">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                            <path
+                                d="M259.1 73.5C262.1 58.7 275.2 48 290.4 48L350.2 48C365.4 48 378.5 58.7 381.5 73.5L396 143.5C410.1 149.5 423.3 157.2 435.3 166.3L503.1 143.8C517.5 139 533.3 145 540.9 158.2L570.8 210C578.4 223.2 575.7 239.8 564.3 249.9L511 297.3C511.9 304.7 512.3 312.3 512.3 320C512.3 327.7 511.8 335.3 511 342.7L564.4 390.2C575.8 400.3 578.4 417 570.9 430.1L541 481.9C533.4 495 517.6 501.1 503.2 496.3L435.4 473.8C423.3 482.9 410.1 490.5 396.1 496.6L381.7 566.5C378.6 581.4 365.5 592 350.4 592L290.6 592C275.4 592 262.3 581.3 259.3 566.5L244.9 496.6C230.8 490.6 217.7 482.9 205.6 473.8L137.5 496.3C123.1 501.1 107.3 495.1 99.7 481.9L69.8 430.1C62.2 416.9 64.9 400.3 76.3 390.2L129.7 342.7C128.8 335.3 128.4 327.7 128.4 320C128.4 312.3 128.9 304.7 129.7 297.3L76.3 249.8C64.9 239.7 62.3 223 69.8 209.9L99.7 158.1C107.3 144.9 123.1 138.9 137.5 143.7L205.3 166.2C217.4 157.1 230.6 149.5 244.6 143.4L259.1 73.5zM320.3 400C364.5 399.8 400.2 363.9 400 319.7C399.8 275.5 363.9 239.8 319.7 240C275.5 240.2 239.8 276.1 240 320.3C240.2 364.5 276.1 400.2 320.3 400z" />
+                        </svg>
+                    </button>
                 </header>
 
                 <section class="scoreboard-board" aria-label="順位一覧">
@@ -749,6 +948,12 @@
                         <span>解答完了: n/N人</span>
                         <button id="next-button-sortable" type="button">次へ</button>
                     </div>
+                    <button class="host-settings-button" type="button" aria-label="設定">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                            <path
+                                d="M259.1 73.5C262.1 58.7 275.2 48 290.4 48L350.2 48C365.4 48 378.5 58.7 381.5 73.5L396 143.5C410.1 149.5 423.3 157.2 435.3 166.3L503.1 143.8C517.5 139 533.3 145 540.9 158.2L570.8 210C578.4 223.2 575.7 239.8 564.3 249.9L511 297.3C511.9 304.7 512.3 312.3 512.3 320C512.3 327.7 511.8 335.3 511 342.7L564.4 390.2C575.8 400.3 578.4 417 570.9 430.1L541 481.9C533.4 495 517.6 501.1 503.2 496.3L435.4 473.8C423.3 482.9 410.1 490.5 396.1 496.6L381.7 566.5C378.6 581.4 365.5 592 350.4 592L290.6 592C275.4 592 262.3 581.3 259.3 566.5L244.9 496.6C230.8 490.6 217.7 482.9 205.6 473.8L137.5 496.3C123.1 501.1 107.3 495.1 99.7 481.9L69.8 430.1C62.2 416.9 64.9 400.3 76.3 390.2L129.7 342.7C128.8 335.3 128.4 327.7 128.4 320C128.4 312.3 128.9 304.7 129.7 297.3L76.3 249.8C64.9 239.7 62.3 223 69.8 209.9L99.7 158.1C107.3 144.9 123.1 138.9 137.5 143.7L205.3 166.2C217.4 157.1 230.6 149.5 244.6 143.4L259.1 73.5zM320.3 400C364.5 399.8 400.2 363.9 400 319.7C399.8 275.5 363.9 239.8 319.7 240C275.5 240.2 239.8 276.1 240 320.3C240.2 364.5 276.1 400.2 320.3 400z" />
+                        </svg>
+                    </button>
                 </header>
 
                 <section class="question-area">
@@ -782,6 +987,12 @@
                         <span>解答完了: n/N人</span>
                         <button id="next-button-sortable-answer" type="button">次へ</button>
                     </div>
+                    <button class="host-settings-button" type="button" aria-label="設定">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                            <path
+                                d="M259.1 73.5C262.1 58.7 275.2 48 290.4 48L350.2 48C365.4 48 378.5 58.7 381.5 73.5L396 143.5C410.1 149.5 423.3 157.2 435.3 166.3L503.1 143.8C517.5 139 533.3 145 540.9 158.2L570.8 210C578.4 223.2 575.7 239.8 564.3 249.9L511 297.3C511.9 304.7 512.3 312.3 512.3 320C512.3 327.7 511.8 335.3 511 342.7L564.4 390.2C575.8 400.3 578.4 417 570.9 430.1L541 481.9C533.4 495 517.6 501.1 503.2 496.3L435.4 473.8C423.3 482.9 410.1 490.5 396.1 496.6L381.7 566.5C378.6 581.4 365.5 592 350.4 592L290.6 592C275.4 592 262.3 581.3 259.3 566.5L244.9 496.6C230.8 490.6 217.7 482.9 205.6 473.8L137.5 496.3C123.1 501.1 107.3 495.1 99.7 481.9L69.8 430.1C62.2 416.9 64.9 400.3 76.3 390.2L129.7 342.7C128.8 335.3 128.4 327.7 128.4 320C128.4 312.3 128.9 304.7 129.7 297.3L76.3 249.8C64.9 239.7 62.3 223 69.8 209.9L99.7 158.1C107.3 144.9 123.1 138.9 137.5 143.7L205.3 166.2C217.4 157.1 230.6 149.5 244.6 143.4L259.1 73.5zM320.3 400C364.5 399.8 400.2 363.9 400 319.7C399.8 275.5 363.9 239.8 319.7 240C275.5 240.2 239.8 276.1 240 320.3C240.2 364.5 276.1 400.2 320.3 400z" />
+                        </svg>
+                    </button>
                 </header>
 
                 <section class="question-area question-area-small">
@@ -815,6 +1026,12 @@
                         <span>解答完了: n/N人</span>
                         <button id="next-button-geoguessr" type="button">次へ</button>
                     </div>
+                    <button class="host-settings-button" type="button" aria-label="設定">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                            <path
+                                d="M259.1 73.5C262.1 58.7 275.2 48 290.4 48L350.2 48C365.4 48 378.5 58.7 381.5 73.5L396 143.5C410.1 149.5 423.3 157.2 435.3 166.3L503.1 143.8C517.5 139 533.3 145 540.9 158.2L570.8 210C578.4 223.2 575.7 239.8 564.3 249.9L511 297.3C511.9 304.7 512.3 312.3 512.3 320C512.3 327.7 511.8 335.3 511 342.7L564.4 390.2C575.8 400.3 578.4 417 570.9 430.1L541 481.9C533.4 495 517.6 501.1 503.2 496.3L435.4 473.8C423.3 482.9 410.1 490.5 396.1 496.6L381.7 566.5C378.6 581.4 365.5 592 350.4 592L290.6 592C275.4 592 262.3 581.3 259.3 566.5L244.9 496.6C230.8 490.6 217.7 482.9 205.6 473.8L137.5 496.3C123.1 501.1 107.3 495.1 99.7 481.9L69.8 430.1C62.2 416.9 64.9 400.3 76.3 390.2L129.7 342.7C128.8 335.3 128.4 327.7 128.4 320C128.4 312.3 128.9 304.7 129.7 297.3L76.3 249.8C64.9 239.7 62.3 223 69.8 209.9L99.7 158.1C107.3 144.9 123.1 138.9 137.5 143.7L205.3 166.2C217.4 157.1 230.6 149.5 244.6 143.4L259.1 73.5zM320.3 400C364.5 399.8 400.2 363.9 400 319.7C399.8 275.5 363.9 239.8 319.7 240C275.5 240.2 239.8 276.1 240 320.3C240.2 364.5 276.1 400.2 320.3 400z" />
+                        </svg>
+                    </button>
                 </header>
 
                 <section class="question-area question-area-small">
@@ -843,6 +1060,12 @@
                         <span>解答完了: n/N人</span>
                         <button id="next-button-geoguessr-answer" type="button">次へ</button>
                     </div>
+                    <button class="host-settings-button" type="button" aria-label="設定">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+                            <path
+                                d="M259.1 73.5C262.1 58.7 275.2 48 290.4 48L350.2 48C365.4 48 378.5 58.7 381.5 73.5L396 143.5C410.1 149.5 423.3 157.2 435.3 166.3L503.1 143.8C517.5 139 533.3 145 540.9 158.2L570.8 210C578.4 223.2 575.7 239.8 564.3 249.9L511 297.3C511.9 304.7 512.3 312.3 512.3 320C512.3 327.7 511.8 335.3 511 342.7L564.4 390.2C575.8 400.3 578.4 417 570.9 430.1L541 481.9C533.4 495 517.6 501.1 503.2 496.3L435.4 473.8C423.3 482.9 410.1 490.5 396.1 496.6L381.7 566.5C378.6 581.4 365.5 592 350.4 592L290.6 592C275.4 592 262.3 581.3 259.3 566.5L244.9 496.6C230.8 490.6 217.7 482.9 205.6 473.8L137.5 496.3C123.1 501.1 107.3 495.1 99.7 481.9L69.8 430.1C62.2 416.9 64.9 400.3 76.3 390.2L129.7 342.7C128.8 335.3 128.4 327.7 128.4 320C128.4 312.3 128.9 304.7 129.7 297.3L76.3 249.8C64.9 239.7 62.3 223 69.8 209.9L99.7 158.1C107.3 144.9 123.1 138.9 137.5 143.7L205.3 166.2C217.4 157.1 230.6 149.5 244.6 143.4L259.1 73.5zM320.3 400C364.5 399.8 400.2 363.9 400 319.7C399.8 275.5 363.9 239.8 319.7 240C275.5 240.2 239.8 276.1 240 320.3C240.2 364.5 276.1 400.2 320.3 400z" />
+                        </svg>
+                    </button>
                 </header>
 
                 <section class="geoguessr-answer-layout">
@@ -898,6 +1121,14 @@
         const participantCountTotalEl = document.getElementById("participant-count-total");
         const participantNameListEl = document.getElementById("participant-name-list");
         const connectionLostEl = document.getElementById("connection-lost");
+        const settingsButtons = Array.from(document.querySelectorAll(".host-settings-button"));
+        const settingsPopup = document.getElementById("settings-popup");
+        const settingsPopupReset = document.getElementById("settings-popup-reset");
+        const settingsPopupClose = document.getElementById("settings-popup-close");
+        const popupSfxVolumeSlider = document.getElementById("popup-sfx-volume-slider");
+        const popupBgmVolumeSlider = document.getElementById("popup-bgm-volume-slider");
+        const popupSfxPlayButton = document.getElementById("popup-sfx-play-button");
+        const popupBgmToggleButton = document.getElementById("popup-bgm-toggle-button");
         const choiceQuestionNumberEls = Array.from(screenChoice.querySelectorAll(".quiz-banner-center span"));
         const sortableQuestionNumberEls = Array.from(screenSortable.querySelectorAll(".quiz-banner-center span"));
         const sortableAnswerQuestionNumberEls = Array.from(screenSortableAnswer.querySelectorAll(".quiz-banner-center span"));
@@ -976,17 +1207,30 @@
         let questionRevealTimerIds = [];
         let scoreboardRevealTimerIds = [];
         let lastAnimatedScoreboardKey = null;
+        let isQuestionAnimationInProgress = false;
         const AUDIO_SETTINGS_STORAGE_KEY = "nisquiz.host.audioSettings";
         const hostAudioSettings = {
             sfxVolume: 80,
             bgmVolume: 35,
         };
-        const AUDIO_FILE_START = "/audio/開始.mp3";
         const AUDIO_FILE_NEXT = "/audio/次へ.mp3";
         const AUDIO_FILE_CORRECT = "/audio/正解.mp3";
         const AUDIO_FILE_QUESTION = "/audio/問題.mp3";
         const AUDIO_FILE_DRUMROLL = "/audio/ドラムロール.mp3";
         const AUDIO_FILE_CHEER = "/audio/歓声.mp3";
+
+        // 全効果音をあらかじめロード
+        const hostEffectSounds = {
+            next: new Audio(AUDIO_FILE_NEXT),
+            correct: new Audio(AUDIO_FILE_CORRECT),
+            question: new Audio(AUDIO_FILE_QUESTION),
+            drumroll: new Audio(AUDIO_FILE_DRUMROLL),
+            cheer: new Audio(AUDIO_FILE_CHEER),
+        };
+        Object.values(hostEffectSounds).forEach((audio) => {
+            audio.preload = "auto";
+        });
+
         const hostBgmAudio = new Audio("/audio/bgm.mp3");
         hostBgmAudio.loop = true;
         hostBgmAudio.preload = "auto";
@@ -1003,6 +1247,8 @@
         function applyAudioSettingsToControls() {
             sfxVolumeSlider.value = String(clampVolume(hostAudioSettings.sfxVolume));
             bgmVolumeSlider.value = String(clampVolume(hostAudioSettings.bgmVolume));
+            popupSfxVolumeSlider.value = String(clampVolume(hostAudioSettings.sfxVolume));
+            popupBgmVolumeSlider.value = String(clampVolume(hostAudioSettings.bgmVolume));
         }
 
         function applyAudioSettingsToPlayers() {
@@ -1012,6 +1258,18 @@
         function syncAudioSettingsFromControls() {
             hostAudioSettings.sfxVolume = clampVolume(sfxVolumeSlider.value);
             hostAudioSettings.bgmVolume = clampVolume(bgmVolumeSlider.value);
+            // ポップアップのスライダーも同期
+            popupSfxVolumeSlider.value = String(hostAudioSettings.sfxVolume);
+            popupBgmVolumeSlider.value = String(hostAudioSettings.bgmVolume);
+            applyAudioSettingsToPlayers();
+        }
+
+        function syncAudioSettingsFromPopup() {
+            hostAudioSettings.sfxVolume = clampVolume(popupSfxVolumeSlider.value);
+            hostAudioSettings.bgmVolume = clampVolume(popupBgmVolumeSlider.value);
+            // コンソールのスライダーも同期
+            sfxVolumeSlider.value = String(hostAudioSettings.sfxVolume);
+            bgmVolumeSlider.value = String(hostAudioSettings.bgmVolume);
             applyAudioSettingsToPlayers();
         }
 
@@ -1038,10 +1296,29 @@
             }));
         }
 
-        function playEffectSound(src = AUDIO_FILE_START) {
+        function playEffectSound(src = AUDIO_FILE_NEXT) {
             return new Promise((resolve) => {
-                const effectAudio = new Audio(src);
+                // ファイルパスから効果音マップのキーを取得
+                let effectAudio = null;
+                if (src === AUDIO_FILE_NEXT) {
+                    effectAudio = hostEffectSounds.next;
+                } else if (src === AUDIO_FILE_CORRECT) {
+                    effectAudio = hostEffectSounds.correct;
+                } else if (src === AUDIO_FILE_QUESTION) {
+                    effectAudio = hostEffectSounds.question;
+                } else if (src === AUDIO_FILE_DRUMROLL) {
+                    effectAudio = hostEffectSounds.drumroll;
+                } else if (src === AUDIO_FILE_CHEER) {
+                    effectAudio = hostEffectSounds.cheer;
+                }
+
+                if (!effectAudio) {
+                    resolve();
+                    return;
+                }
+
                 effectAudio.volume = clampVolume(hostAudioSettings.sfxVolume) / 100;
+                effectAudio.currentTime = 0; // 再生位置をリセット
 
                 let settled = false;
                 const settle = () => {
@@ -1063,6 +1340,7 @@
 
         function updateBgmToggleButtonLabel() {
             bgmToggleButton.textContent = hostBgmAudio.paused ? "再生" : "停止";
+            popupBgmToggleButton.textContent = hostBgmAudio.paused ? "再生" : "停止";
         }
 
         function playBgm() {
@@ -1102,7 +1380,7 @@
 
         async function playStartButtonSequence() {
             syncAudioSettingsFromControls();
-            await playEffectSound(AUDIO_FILE_START);
+            await playEffectSound(AUDIO_FILE_NEXT);
             await playBgm();
         }
 
@@ -1147,11 +1425,31 @@
 
             sfxPlayButton.addEventListener("click", () => {
                 syncAudioSettingsFromControls();
-                void playEffectSound(AUDIO_FILE_START);
+                void playEffectSound(AUDIO_FILE_NEXT);
             });
 
             bgmToggleButton.addEventListener("click", () => {
                 syncAudioSettingsFromControls();
+                toggleBgmPlayback();
+            });
+
+            popupSfxVolumeSlider.addEventListener("input", () => {
+                syncAudioSettingsFromPopup();
+                saveAudioSettingsToStorage();
+            });
+
+            popupBgmVolumeSlider.addEventListener("input", () => {
+                syncAudioSettingsFromPopup();
+                saveAudioSettingsToStorage();
+            });
+
+            popupSfxPlayButton.addEventListener("click", () => {
+                syncAudioSettingsFromPopup();
+                void playEffectSound(AUDIO_FILE_NEXT);
+            });
+
+            popupBgmToggleButton.addEventListener("click", () => {
+                syncAudioSettingsFromPopup();
                 toggleBgmPlayback();
             });
 
@@ -1161,7 +1459,7 @@
             // Expose simple helpers for future timing hooks (question start, etc.).
             window.hostAudio = {
                 playEffect: playEffectSound,
-                playStartEffect: () => playEffectSound(AUDIO_FILE_START),
+                playStartEffect: () => playEffectSound(AUDIO_FILE_NEXT),
                 playBgm,
                 pauseBgm,
                 stopBgm,
@@ -1427,6 +1725,7 @@
                 clearTimeout(timerId);
             });
             questionRevealTimerIds = [];
+            isQuestionAnimationInProgress = false;
         }
 
         function makeRevealHiddenInstant(element) {
@@ -1496,6 +1795,7 @@
             }
 
             clearQuestionRevealTimers();
+            isQuestionAnimationInProgress = true;
             targets.forEach((element) => makeRevealHiddenInstant(element));
 
             const [questionBlock, choiceBlock] = targets;
@@ -1505,6 +1805,7 @@
 
             questionRevealTimerIds.push(setTimeout(() => {
                 revealWithFade(choiceBlock);
+                isQuestionAnimationInProgress = false;
             }, 3000));
         }
 
@@ -1584,8 +1885,6 @@
                 return;
             }
 
-            lastAnimatedScoreboardKey = null;
-
             const question = state.question;
             updateQuestionMeta(question);
             if (question.type === "choice") {
@@ -1594,7 +1893,7 @@
                 if (state.phase === "question" && shouldAnimateQuestionReveal(state, question, isFirstStateSync)) {
                     startQuestionRevealAnimation(question.type);
                     pendingQuestionAnimation = null;
-                } else {
+                } else if (!isQuestionAnimationInProgress) {
                     clearQuestionRevealTimers();
                     resetAllQuestionRevealVisibility();
                 }
@@ -1613,7 +1912,7 @@
                     if (shouldAnimateQuestionReveal(state, question, isFirstStateSync)) {
                         startQuestionRevealAnimation(question.type);
                         pendingQuestionAnimation = null;
-                    } else {
+                    } else if (!isQuestionAnimationInProgress) {
                         clearQuestionRevealTimers();
                         resetAllQuestionRevealVisibility();
                     }
@@ -1635,7 +1934,7 @@
                     if (shouldAnimateQuestionReveal(state, question, isFirstStateSync)) {
                         startQuestionRevealAnimation(question.type);
                         pendingQuestionAnimation = null;
-                    } else {
+                    } else if (!isQuestionAnimationInProgress) {
                         clearQuestionRevealTimers();
                         resetAllQuestionRevealVisibility();
                     }
@@ -1693,7 +1992,7 @@
         }
 
         function renderQuizScreen(screen, questionElement, items, question, choices, labels) {
-            questionElement.textContent = question;
+            questionElement.innerHTML = question.replace(/\\n/g, '<br>');
             items.forEach((item, i) => {
                 const choiceNumber = item.querySelector(".choice-num");
                 item.querySelector(".choice-text").textContent = choices[i] ?? "";
@@ -1748,7 +2047,7 @@
         function showGeoguessrScreen(question, imageUrl) {
             currentGeoguessrQuestion = question;
             currentGeoguessrImageUrl = imageUrl;
-            geoguessrQuestionText.textContent = question;
+            geoguessrQuestionText.innerHTML = question.replace(/\\n/g, '<br>');
             geoguessrImage.src = imageUrl;
             screenConsole.hidden = true;
             screenSlide.hidden = true;
@@ -1847,6 +2146,37 @@
             }
 
             hostWs.send(JSON.stringify({ type: "host-reset" }));
+        });
+
+        settingsButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                applyAudioSettingsToControls();
+                settingsPopup.classList.add("show");
+            });
+        });
+
+        settingsPopupClose.addEventListener("click", () => {
+            settingsPopup.classList.remove("show");
+        });
+
+        settingsPopupReset.addEventListener("click", () => {
+            if (!hostWs || hostWs.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            const confirmed = window.confirm("ゲームをリセットします。よろしいですか？");
+            if (!confirmed) {
+                return;
+            }
+
+            hostWs.send(JSON.stringify({ type: "host-reset" }));
+            settingsPopup.classList.remove("show");
+        });
+
+        settingsPopup.addEventListener("click", (event) => {
+            if (event.target === settingsPopup) {
+                settingsPopup.classList.remove("show");
+            }
         });
 
         nextButton.addEventListener("click", () => {
