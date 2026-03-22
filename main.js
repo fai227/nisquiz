@@ -443,11 +443,28 @@ function calculateGeoguessrScore(question, answer) {
     }
 
     const distance = calculateGeoguessrDistance(answerPoint, correctPoint);
-    if (!Number.isFinite(distance) || distance >= 300) {
+    if (!Number.isFinite(distance)) {
         return 0;
     }
 
-    return Math.round(200 * (1 - (distance / 300)));
+    // 正解許容値（tolerance）を反映させる
+    const toleranceRaw = question?.正解許容値;
+    const tolerance = Number.isFinite(Number(toleranceRaw)) ? Number(toleranceRaw) : 0;
+    const maxDistance = 300;
+
+    // 距離が許容値以下なら満点
+    if (distance <= tolerance) {
+        return 200;
+    }
+
+    // 許容値から最大距離の間で線形に点数を落とす
+    if (distance >= maxDistance) {
+        return 0;
+    }
+
+    const denom = Math.max(1, maxDistance - tolerance);
+    const ratio = (distance - tolerance) / denom; // 0..1
+    return Math.round(200 * (1 - ratio));
 }
 
 function calculateScoreForAnswer(question, answer) {
